@@ -1,7 +1,7 @@
 
-# KRYPTO PROJECT
+# RemindMe
 
-Capstone Project for CSCE 4901
+An app to help those with ADHD and other users with attention deficits to stay on task in a fun and engaging way.
 
 
 ## Authors
@@ -13,8 +13,8 @@ Capstone Project for CSCE 4901
 - Joey Ryan Suliguin [@vinbi](https://github.com/vinbi07e)
 
 
-## Acknowledgemnts
-Sponsor: Pending
+## Acknowledgements
+Sponsor: David Keathly
 
 
 ## Features
