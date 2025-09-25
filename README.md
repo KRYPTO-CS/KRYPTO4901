@@ -1,5 +1,5 @@
 
-# RemindMe
+# TaskBlast
 
 An app to help those with ADHD and other users with attention deficits to stay on task in a fun and engaging way.
 
