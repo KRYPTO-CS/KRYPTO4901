@@ -7,6 +7,7 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
+import { colors, shadows, borderRadius, spacing } from "../styles/global";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -82,10 +83,10 @@ export default function Login() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5",
+    backgroundColor: colors.background,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    padding: spacing.md,
   },
   logoContainer: {
     marginBottom: 50,
@@ -94,29 +95,22 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 48,
     fontWeight: "bold",
-    color: "#4a90e2",
+    color: colors.primary,
     letterSpacing: 2,
   },
   loginContainer: {
     width: "100%",
     maxWidth: 400,
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
-    padding: 30,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    ...shadows.medium,
   },
   title: {
     fontSize: 24,
     fontWeight: "600",
-    color: "#333",
-    marginBottom: 30,
+    color: colors.text.primary,
+    marginBottom: spacing.xl,
     textAlign: "center",
   },
   input: {
@@ -124,46 +118,39 @@ const styles = StyleSheet.create({
     height: 50,
     backgroundColor: "#f9f9f9",
     borderWidth: 1,
-    borderColor: "#e0e0e0",
-    borderRadius: 8,
+    borderColor: colors.border.light,
+    borderRadius: borderRadius.md,
     paddingHorizontal: 15,
     fontSize: 16,
     marginBottom: 15,
-    color: "#333",
+    color: colors.text.primary,
   },
   loginButton: {
     width: "100%",
     height: 50,
-    backgroundColor: "#4a90e2",
-    borderRadius: 8,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 10,
-    shadowColor: "#4a90e2",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 3,
+    ...shadows.button,
   },
   loginButtonText: {
-    color: "#ffffff",
+    color: colors.text.inverse,
     fontSize: 18,
     fontWeight: "600",
   },
   bottomContainer: {
-    marginTop: 30,
+    marginTop: spacing.xl,
     alignItems: "center",
   },
   linkText: {
     fontSize: 14,
-    color: "#666",
+    color: colors.text.secondary,
     marginVertical: 8,
   },
   linkTextBold: {
     fontWeight: "600",
-    color: "#4a90e2",
+    color: colors.primary,
   },
 });
