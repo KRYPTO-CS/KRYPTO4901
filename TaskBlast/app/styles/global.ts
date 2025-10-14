@@ -1,7 +1,7 @@
 // Global styles and theme configuration for TaskBlast
 
 export const colors = {
-  primary: '#4a90e2',
+  primary: '#6ab37fff',
   primaryDark: '#3a7bc8',
   primaryLight: '#6ba3e8',
   secondary: '#666',
@@ -55,6 +55,18 @@ export const fontWeight = {
   medium: '500' as const,
   semibold: '600' as const,
   bold: '700' as const,
+};
+
+export const fontFamily = {
+  madimi: 'MadimiOne_400Regular',
+  orbitron: {
+    regular: 'Orbitron_400Regular',
+    medium: 'Orbitron_500Medium',
+    semibold: 'Orbitron_600SemiBold',
+    bold: 'Orbitron_700Bold',
+    extrabold: 'Orbitron_800ExtraBold',
+    black: 'Orbitron_900Black',
+  },
 };
 
 export const shadows = {
@@ -133,14 +145,142 @@ export const typography = {
   },
 };
 
+// Button Styles
+export const buttons = {
+  primary: {
+    backgroundColor: '#9DE8B2',
+    paddingVertical: spacing.md,      // REDUCED: 4px (was sm = 8px)
+    paddingHorizontal: spacing.xl,    // Stays at 4px
+    borderRadius: 10, // Fully rounded    
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    ...shadows.button,
+  },
+  secondary: {
+    backgroundColor: colors.secondary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    ...shadows.small,
+  },
+  outline: {
+    backgroundColor: 'transparent',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  ghost: {
+    backgroundColor: 'transparent',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  success: {
+    backgroundColor: colors.success,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    ...shadows.small,
+  },
+  error: {
+    backgroundColor: colors.error,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    ...shadows.small,
+  },
+  warning: {
+    backgroundColor: colors.warning,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    ...shadows.small,
+  },
+  // Size variants
+  small: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+  },
+  large: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+  },
+};
+
+// Button Text Styles
+export const buttonText = {
+  primary: {
+    color: '#1f1f1f',
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.orbitron.medium,
+    fontWeight: fontWeight.semibold,
+  },
+  secondary: {
+    color: colors.text.inverse,
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.orbitron.medium,
+    fontWeight: fontWeight.semibold,
+  },
+  outline: {
+    color: colors.primary,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+  },
+  ghost: {
+    color: colors.primary,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+  },
+  success: {
+    color: colors.text.inverse,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+  },
+  error: {
+    color: colors.text.inverse,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+  },
+  warning: {
+    color: colors.text.inverse,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+  },
+  small: {
+    fontSize: fontSize.sm,
+  },
+  large: {
+    fontSize: fontSize.lg,
+  },
+};
+
 export const theme = {
   colors,
   spacing,
   borderRadius,
   fontSize,
   fontWeight,
+  fontFamily,
   shadows,
   typography,
+  buttons,
+  buttonText,
 };
 
 export default theme;
