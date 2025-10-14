@@ -29,7 +29,7 @@ export default function Login() {
       </View>
 
       {/* Login Container */}
-      <View className="w-full max-w-md bg-surface rounded-xl p-8 shadow-lg">
+      <View className="w-full max-w-md bg-transparent rounded-xl p-8 border-2 border-gray-300 border-dashed">
         <Text className="text-4xl font-madimi font-semibold text-text-primary mb-8 text-center">
           Login
         </Text>
@@ -44,7 +44,7 @@ export default function Login() {
         />
 
         <TextInput
-          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-4 text-base text-text-primary"
+          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-8 text-base text-text-primary margin-bottom-xxl"
           placeholder="Password"
           placeholderTextColor="#999"
           value={password}
@@ -52,15 +52,15 @@ export default function Login() {
           secureTextEntry
           autoCapitalize="none"
         />
-
-        <MainButton
-          title="Login"
-          variant="primary"
-          size="medium"
-          customStyle={{ width: "75%", alignSelf: "center" }}
-          onPress={handleLogin}
-        />
       </View>
+
+      <MainButton
+        title="Submit"
+        variant="primary"
+        size="medium"
+        customStyle={{ width: "60%", alignSelf: "center", marginTop: -15 }}
+        onPress={handleLogin}
+      />
 
       {/* Bottom Links */}
       <View className="mt-8 items-center">

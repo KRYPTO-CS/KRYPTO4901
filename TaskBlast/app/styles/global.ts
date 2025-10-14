@@ -149,9 +149,10 @@ export const typography = {
 export const buttons = {
   primary: {
     backgroundColor: '#9DE8B2',
-    paddingVertical: spacing.md,      // REDUCED: 4px (was sm = 8px)
-    paddingHorizontal: spacing.xl,    // Stays at 4px
-    borderRadius: 10, // Fully rounded    
+    paddingVertical: spacing.md,     
+    paddingHorizontal: spacing.xl,   
+    borderRadius: 10, 
+    border: '2px solid #437B00', 
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     ...shadows.button,
