@@ -1,13 +1,5 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-} from "react-native";
-import { colors, shadows, borderRadius, spacing } from "../styles/global";
+import { View, Text, TextInput, TouchableOpacity } from "react-native";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -29,18 +21,22 @@ export default function Login() {
   };
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-background items-center justify-center p-5">
       {/* Logo Section */}
-      <View style={styles.logoContainer}>
-        <Text style={styles.logoText}>TaskBlast</Text>
+      <View className="mb-12 items-center">
+        <Text className="text-5xl font-bold text-primary tracking-widest">
+          TaskBlast
+        </Text>
       </View>
 
       {/* Login Container */}
-      <View style={styles.loginContainer}>
-        <Text style={styles.title}>Login</Text>
+      <View className="w-full max-w-md bg-surface rounded-xl p-8 shadow-lg">
+        <Text className="text-2xl font-semibold text-text-primary mb-8 text-center">
+          Login
+        </Text>
 
         <TextInput
-          style={styles.input}
+          className="w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-4 text-base text-text-primary"
           placeholder="Username"
           placeholderTextColor="#999"
           value={username}
@@ -49,7 +45,7 @@ export default function Login() {
         />
 
         <TextInput
-          style={styles.input}
+          className="w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-4 text-base text-text-primary"
           placeholder="Password"
           placeholderTextColor="#999"
           value={password}
@@ -58,99 +54,29 @@ export default function Login() {
           autoCapitalize="none"
         />
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Login</Text>
+        <TouchableOpacity
+          className="w-full h-12 bg-primary rounded-lg items-center justify-center mt-2 shadow-md active:opacity-80"
+          onPress={handleLogin}
+        >
+          <Text className="text-white text-lg font-semibold">Login</Text>
         </TouchableOpacity>
       </View>
 
       {/* Bottom Links */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity onPress={handleSignUp}>
-          <Text style={styles.linkText}>
+      <View className="mt-8 items-center">
+        <TouchableOpacity onPress={handleSignUp} className="my-2">
+          <Text className="text-sm text-text-secondary">
             Don't have an account?{" "}
-            <Text style={styles.linkTextBold}>Sign Up</Text>
+            <Text className="font-semibold text-primary">Sign Up</Text>
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleForgotPassword}>
-          <Text style={styles.linkText}>Forgot Your Password?</Text>
+        <TouchableOpacity onPress={handleForgotPassword} className="my-2">
+          <Text className="text-sm text-text-secondary">
+            Forgot Your Password?
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: spacing.md,
-  },
-  logoContainer: {
-    marginBottom: 50,
-    alignItems: "center",
-  },
-  logoText: {
-    fontSize: 48,
-    fontWeight: "bold",
-    color: colors.primary,
-    letterSpacing: 2,
-  },
-  loginContainer: {
-    width: "100%",
-    maxWidth: 400,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    ...shadows.medium,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "600",
-    color: colors.text.primary,
-    marginBottom: spacing.xl,
-    textAlign: "center",
-  },
-  input: {
-    width: "100%",
-    height: 50,
-    backgroundColor: "#f9f9f9",
-    borderWidth: 1,
-    borderColor: colors.border.light,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: 15,
-    fontSize: 16,
-    marginBottom: 15,
-    color: colors.text.primary,
-  },
-  loginButton: {
-    width: "100%",
-    height: 50,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 10,
-    ...shadows.button,
-  },
-  loginButtonText: {
-    color: colors.text.inverse,
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  bottomContainer: {
-    marginTop: spacing.xl,
-    alignItems: "center",
-  },
-  linkText: {
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginVertical: 8,
-  },
-  linkTextBold: {
-    fontWeight: "600",
-    color: colors.primary,
-  },
-});
