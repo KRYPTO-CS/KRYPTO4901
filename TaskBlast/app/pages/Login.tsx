@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from "react-native";
 import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
 import VerifyCode from "./VerifyCode";
@@ -238,7 +238,8 @@ export default function Login() {
   }
 
   return (
-    <View className="flex-1 bg-background items-center justify-center p-5">
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+      <View className="flex-1 bg-background items-center justify-center p-5">
       {/* Logo Section */}
       <View className="mb-12 items-center">
         <Text className="text-6xl font-madimi text-primary">TaskBlast</Text>
@@ -257,6 +258,7 @@ export default function Login() {
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
+          onSubmitEditing={() => Keyboard.dismiss()}
         />
 
         <TextInput
@@ -267,6 +269,7 @@ export default function Login() {
           onChangeText={setPassword}
           secureTextEntry
           autoCapitalize="none"
+          onSubmitEditing={() => Keyboard.dismiss()}
         />
       </View>
 
@@ -293,6 +296,7 @@ export default function Login() {
           </Text>
         </TouchableOpacity>
       </View>
-    </View>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }

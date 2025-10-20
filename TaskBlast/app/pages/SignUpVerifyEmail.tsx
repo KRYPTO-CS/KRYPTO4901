@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { View, Text, TextInput } from "react-native";
+import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard } from "react-native";
 import MainButton from "../components/MainButton";
 
 interface SignUpVerifyEmailProps {
@@ -66,7 +66,8 @@ export default function SignUpVerifyEmail({
   };
 
   return (
-    <View className="flex-1 bg-background items-center justify-center p-5">
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+      <View className="flex-1 bg-background items-center justify-center p-5">
       {/* Verify Email Container */}
       <View className="w-full max-w-md bg-transparent rounded-xl p-8">
         <Text className="text-4xl font-madimi font-semibold text-text-primary mb-4 text-left">
@@ -91,6 +92,7 @@ export default function SignUpVerifyEmail({
               onChangeText={(text) => handleCodeChange(text, index)}
               onKeyPress={(e) => handleKeyPress(e, index)}
               keyboardType="number-pad"
+              onSubmitEditing={() => Keyboard.dismiss()}
               maxLength={1}
             />
           ))}
@@ -122,6 +124,7 @@ export default function SignUpVerifyEmail({
           <Text className="font-semibold text-primary">Previous Step</Text>
         </Text>
       </View>
-    </View>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }

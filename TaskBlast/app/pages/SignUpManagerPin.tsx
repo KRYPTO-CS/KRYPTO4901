@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput } from "react-native";
+import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard } from "react-native";
 import MainButton from "../components/MainButton";
 
 interface SignUpManagerPinProps {
@@ -27,6 +27,7 @@ export default function SignUpManagerPin({ onSubmit, onBack }: SignUpManagerPinP
   };
 
   return (
+      <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
     <View className="flex-1 bg-background items-center justify-center p-5">
       <View className="w-full max-w-md bg-transparent rounded-xl p-8">
         <Text className="text-4xl font-madimi font-semibold text-text-primary mb-4 text-left">
@@ -47,6 +48,7 @@ export default function SignUpManagerPin({ onSubmit, onBack }: SignUpManagerPinP
           keyboardType="number-pad"
           secureTextEntry
           maxLength={4}
+            onSubmitEditing={() => Keyboard.dismiss()}
         />
 
         <Text className="font-madimi text-xs text-text-secondary mb-2">Confirm PIN</Text>
@@ -59,6 +61,7 @@ export default function SignUpManagerPin({ onSubmit, onBack }: SignUpManagerPinP
           keyboardType="number-pad"
           secureTextEntry
           maxLength={4}
+            onSubmitEditing={() => Keyboard.dismiss()}
         />
 
         {error ? (
@@ -83,5 +86,6 @@ export default function SignUpManagerPin({ onSubmit, onBack }: SignUpManagerPinP
         </View>
       </View>
     </View>
+      </TouchableWithoutFeedback>
   );
 }
