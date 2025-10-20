@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { View, Text, TextInput } from "react-native";
+import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard } from "react-native";
 import MainButton from "../components/MainButton";
 
 interface VerifyCodeProps {
@@ -61,7 +61,8 @@ export default function VerifyCode({
   };
 
   return (
-    <View className="flex-1 bg-background items-center justify-center p-5">
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+      <View className="flex-1 bg-background items-center justify-center p-5">
       {/* Verify Code Container */}
       <View className="w-full max-w-md bg-transparent rounded-xl p-8">
         <Text className="text-4xl font-madimi font-semibold text-text-primary mb-4 text-left">
@@ -86,6 +87,7 @@ export default function VerifyCode({
               onChangeText={(text) => handleCodeChange(text, index)}
               onKeyPress={(e) => handleKeyPress(e, index)}
               keyboardType="number-pad"
+              onSubmitEditing={() => Keyboard.dismiss()}
               maxLength={1}
             />
           ))}
@@ -116,5 +118,6 @@ export default function VerifyCode({
         </Text>
       </View>
     </View>
+    </TouchableWithoutFeedback>
   );
 }
