@@ -1,0 +1,120 @@
+import React, { useState, useRef } from "react";
+import { View, Text, TextInput } from "react-native";
+import MainButton from "../components/MainButton";
+
+interface VerifyCodeProps {
+  email: string;
+  onSubmit: (code: string) => void;
+  onBack: () => void;
+}
+
+export default function VerifyCode({
+  email,
+  onSubmit,
+  onBack,
+}: VerifyCodeProps) {
+  const [code, setCode] = useState(["", "", "", "", ""]);
+  const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  const handleSubmit = () => {
+    const fullCode = code.join("");
+    if (fullCode.length === 5) {
+      console.log("Verification code submitted:", fullCode);
+      onSubmit(fullCode);
+    } else {
+      console.log("Please enter a valid 5-digit code");
+    }
+  };
+
+  const handleCodeChange = (text: string, index: number) => {
+    // Only allow numbers
+    const numericText = text.replace(/[^0-9]/g, "");
+
+    if (numericText.length > 0) {
+      const newCode = [...code];
+      newCode[index] = numericText[numericText.length - 1]; // Take only the last digit
+      setCode(newCode);
+
+      // Auto-focus next input
+      if (index < 4) {
+        inputRefs.current[index + 1]?.focus();
+      }
+    }
+  };
+
+  const handleKeyPress = (e: any, index: number) => {
+    // Handle backspace
+    if (e.nativeEvent.key === "Backspace") {
+      const newCode = [...code];
+
+      if (code[index] === "" && index > 0) {
+        // If current box is empty, go back and clear previous box
+        inputRefs.current[index - 1]?.focus();
+        newCode[index - 1] = "";
+      } else {
+        // Clear current box
+        newCode[index] = "";
+      }
+
+      setCode(newCode);
+    }
+  };
+
+  return (
+    <View className="flex-1 bg-background items-center justify-center p-5">
+      {/* Verify Code Container */}
+      <View className="w-full max-w-md bg-transparent rounded-xl p-8">
+        <Text className="text-4xl font-madimi font-semibold text-text-primary mb-4 text-left">
+          Verify Code
+        </Text>
+
+        <Text className="font-madimi text-sm text-text-secondary mb-8 text-left">
+          Enter the 5-digit code sent to {email}
+        </Text>
+
+        <View className="flex-row justify-between mb-8" style={{ gap: 10 }}>
+          {[0, 1, 2, 3, 4].map((index) => (
+            <TextInput
+              key={index}
+              ref={(ref) => {
+                inputRefs.current[index] = ref;
+              }}
+              className="font-madimi flex-1 h-14 bg-gray-50 border border-gray-300 rounded-lg text-2xl text-text-primary text-center"
+              placeholder="0"
+              placeholderTextColor="#999"
+              value={code[index]}
+              onChangeText={(text) => handleCodeChange(text, index)}
+              onKeyPress={(e) => handleKeyPress(e, index)}
+              keyboardType="number-pad"
+              maxLength={1}
+            />
+          ))}
+        </View>
+
+        <Text className="font-madimi text-xs text-text-secondary text-left">
+          Didn't receive the code?{" "}
+          <Text className="font-semibold text-primary">Resend</Text>
+        </Text>
+
+        <MainButton
+          title="Submit"
+          variant="primary"
+          size="medium"
+          customStyle={{ width: "60%", alignSelf: "flex-start", marginTop: 10 }}
+          onPress={handleSubmit}
+        />
+      </View>
+
+      {/* Back Link */}
+      <View className="mt-8 items-center">
+        <Text
+          className="font-madimi text-sm text-text-secondary cursor-pointer"
+          onPress={onBack}
+        >
+          Back to{" "}
+          <Text className="font-semibold text-primary">Previous Step</Text>
+        </Text>
+      </View>
+    </View>
+  );
+}

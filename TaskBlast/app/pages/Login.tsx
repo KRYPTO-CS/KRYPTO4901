@@ -1,10 +1,18 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity } from "react-native";
 import MainButton from "../components/MainButton";
+import ForgotPassword from "./ForgotPassword";
+import VerifyCode from "./VerifyCode";
+import ResetPassword from "./ResetPassword";
+
+type Screen = "login" | "forgotPassword" | "verifyCode" | "resetPassword";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [currentScreen, setCurrentScreen] = useState<Screen>("login");
+  const [resetEmail, setResetEmail] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
 
   const handleLogin = () => {
     // Handle login logic here
@@ -12,14 +20,63 @@ export default function Login() {
   };
 
   const handleForgotPassword = () => {
-    // Handle forgot password logic here
-    console.log("Forgot password clicked");
+    setCurrentScreen("forgotPassword");
   };
 
   const handleSignUp = () => {
     // Handle sign up navigation here
     console.log("Sign up clicked");
   };
+
+  const handleEmailSubmit = (email: string) => {
+    setResetEmail(email);
+    setCurrentScreen("verifyCode");
+  };
+
+  const handleCodeSubmit = (code: string) => {
+    setVerificationCode(code);
+    setCurrentScreen("resetPassword");
+  };
+
+  const handlePasswordReset = (newPassword: string) => {
+    console.log("Password reset successful for:", resetEmail);
+    // Reset state and return to login
+    setResetEmail("");
+    setVerificationCode("");
+    setCurrentScreen("login");
+  };
+
+  const handleBackToLogin = () => {
+    setCurrentScreen("login");
+    setResetEmail("");
+    setVerificationCode("");
+  };
+
+  // Render forgot password flow screens
+  if (currentScreen === "forgotPassword") {
+    return (
+      <ForgotPassword onSubmit={handleEmailSubmit} onBack={handleBackToLogin} />
+    );
+  }
+
+  if (currentScreen === "verifyCode") {
+    return (
+      <VerifyCode
+        email={resetEmail}
+        onSubmit={handleCodeSubmit}
+        onBack={() => setCurrentScreen("forgotPassword")}
+      />
+    );
+  }
+
+  if (currentScreen === "resetPassword") {
+    return (
+      <ResetPassword
+        onSubmit={handlePasswordReset}
+        onBack={handleBackToLogin}
+      />
+    );
+  }
 
   return (
     <View className="flex-1 bg-background items-center justify-center p-5">
