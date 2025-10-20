@@ -59,7 +59,7 @@ export default function SignUpBirthdate({
 
     // COPPA compliance - must be 13 or older
     if (age < 13) {
-      setError("You must be at least 13 years old to sign up");
+      setError("Please give the device to a parent or guardian");
       return;
     }
 
@@ -80,7 +80,7 @@ export default function SignUpBirthdate({
         </Text>
 
         <Text className="font-madimi text-sm text-text-secondary mb-8 text-left">
-          You must be at least 13 years old to use TaskBlast
+          You must be at least 13 years old to register
         </Text>
 
         <View className="flex-row justify-between mb-4" style={{ gap: 10 }}>
