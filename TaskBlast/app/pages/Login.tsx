@@ -4,8 +4,24 @@ import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
 import VerifyCode from "./VerifyCode";
 import ResetPassword from "./ResetPassword";
+import SignUpBirthdate from "./SignUpBirthdate";
+import SignUpName from "./SignUpName";
+import SignUpEmail from "./SignUpEmail";
+import SignUpVerifyEmail from "./SignUpVerifyEmail";
+import SignUpCreatePassword from "./SignUpCreatePassword";
+import HomeScreen from "./HomeScreen";
 
-type Screen = "login" | "forgotPassword" | "verifyCode" | "resetPassword";
+type Screen =
+  | "login"
+  | "forgotPassword"
+  | "verifyCode"
+  | "resetPassword"
+  | "signUpBirthdate"
+  | "signUpName"
+  | "signUpEmail"
+  | "signUpVerifyEmail"
+  | "signUpCreatePassword"
+  | "homeScreen";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -13,6 +29,16 @@ export default function Login() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
   const [resetEmail, setResetEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+
+  // Sign up state
+  const [signUpData, setSignUpData] = useState({
+    birthdate: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    verificationCode: "",
+    password: "",
+  });
 
   const handleLogin = () => {
     // Handle login logic here
@@ -24,8 +50,8 @@ export default function Login() {
   };
 
   const handleSignUp = () => {
-    // Handle sign up navigation here
-    console.log("Sign up clicked");
+    // Navigate to sign up flow
+    setCurrentScreen("signUpBirthdate");
   };
 
   const handleEmailSubmit = (email: string) => {
@@ -52,6 +78,46 @@ export default function Login() {
     setVerificationCode("");
   };
 
+  // Sign Up Flow Handlers
+  const handleBirthdateSubmit = (birthdate: string) => {
+    setSignUpData({ ...signUpData, birthdate });
+    setCurrentScreen("signUpName");
+  };
+
+  const handleNameSubmit = (firstName: string, lastName: string) => {
+    setSignUpData({ ...signUpData, firstName, lastName });
+    setCurrentScreen("signUpEmail");
+  };
+
+  const handleSignUpEmailSubmit = (email: string) => {
+    setSignUpData({ ...signUpData, email });
+    setCurrentScreen("signUpVerifyEmail");
+  };
+
+  const handleSignUpVerifyEmailSubmit = (code: string) => {
+    setSignUpData({ ...signUpData, verificationCode: code });
+    setCurrentScreen("signUpCreatePassword");
+  };
+
+  const handleSignUpPasswordSubmit = (password: string) => {
+    setSignUpData({ ...signUpData, password });
+    console.log("Sign up complete with data:", { ...signUpData, password });
+    // Navigate to home screen
+    setCurrentScreen("homeScreen");
+  };
+
+  const handleBackToLoginFromSignUp = () => {
+    setCurrentScreen("login");
+    setSignUpData({
+      birthdate: "",
+      firstName: "",
+      lastName: "",
+      email: "",
+      verificationCode: "",
+      password: "",
+    });
+  };
+
   // Render forgot password flow screens
   if (currentScreen === "forgotPassword") {
     return (
@@ -76,6 +142,57 @@ export default function Login() {
         onBack={handleBackToLogin}
       />
     );
+  }
+
+  // Render sign up flow screens
+  if (currentScreen === "signUpBirthdate") {
+    return (
+      <SignUpBirthdate
+        onSubmit={handleBirthdateSubmit}
+        onBack={handleBackToLoginFromSignUp}
+      />
+    );
+  }
+
+  if (currentScreen === "signUpName") {
+    return (
+      <SignUpName
+        onSubmit={handleNameSubmit}
+        onBack={() => setCurrentScreen("signUpBirthdate")}
+      />
+    );
+  }
+
+  if (currentScreen === "signUpEmail") {
+    return (
+      <SignUpEmail
+        onSubmit={handleSignUpEmailSubmit}
+        onBack={() => setCurrentScreen("signUpName")}
+      />
+    );
+  }
+
+  if (currentScreen === "signUpVerifyEmail") {
+    return (
+      <SignUpVerifyEmail
+        email={signUpData.email}
+        onSubmit={handleSignUpVerifyEmailSubmit}
+        onBack={() => setCurrentScreen("signUpEmail")}
+      />
+    );
+  }
+
+  if (currentScreen === "signUpCreatePassword") {
+    return (
+      <SignUpCreatePassword
+        onSubmit={handleSignUpPasswordSubmit}
+        onBack={() => setCurrentScreen("signUpVerifyEmail")}
+      />
+    );
+  }
+
+  if (currentScreen === "homeScreen") {
+    return <HomeScreen />;
   }
 
   return (
