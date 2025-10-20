@@ -33,7 +33,7 @@ export default function SignUpName({ onSubmit, onBack }: SignUpNameProps) {
         </Text>
 
         <Text className="font-madimi text-sm text-text-secondary mb-8 text-left">
-          Let us know what to call you
+          Let us know what to call you while using TaskBlast
         </Text>
 
         <TextInput

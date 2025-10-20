@@ -5,6 +5,8 @@ import ForgotPassword from "./ForgotPassword";
 import VerifyCode from "./VerifyCode";
 import ResetPassword from "./ResetPassword";
 import SignUpBirthdate from "./SignUpBirthdate";
+import SignUpAccountType from "./SignUpAccountType";
+import SignUpManagerPin from "./SignUpManagerPin";
 import SignUpName from "./SignUpName";
 import SignUpEmail from "./SignUpEmail";
 import SignUpVerifyEmail from "./SignUpVerifyEmail";
@@ -17,6 +19,8 @@ type Screen =
   | "verifyCode"
   | "resetPassword"
   | "signUpBirthdate"
+  | "signUpAccountType"
+  | "signUpManagerPin"
   | "signUpName"
   | "signUpEmail"
   | "signUpVerifyEmail"
@@ -38,6 +42,8 @@ export default function Login() {
     email: "",
     verificationCode: "",
     password: "",
+    accountType: "",
+    managerialPin: null as string | null,
   });
 
   const handleLogin = () => {
@@ -81,6 +87,22 @@ export default function Login() {
   // Sign Up Flow Handlers
   const handleBirthdateSubmit = (birthdate: string) => {
     setSignUpData({ ...signUpData, birthdate });
+    setCurrentScreen("signUpAccountType");
+  };
+
+  const handleAccountTypeSubmit = (accountType: "managed" | "independent") => {
+    setSignUpData({ ...signUpData, accountType });
+    // If managed, prompt for managerial PIN; if independent, set PIN to null and continue
+    if (accountType === "managed") {
+      setCurrentScreen("signUpManagerPin");
+    } else {
+      setSignUpData({ ...signUpData, accountType, managerialPin: null });
+      setCurrentScreen("signUpName");
+    }
+  };
+
+  const handleManagerPinSubmit = (pin: string | null) => {
+    setSignUpData({ ...signUpData, managerialPin: pin });
     setCurrentScreen("signUpName");
   };
 
@@ -115,6 +137,8 @@ export default function Login() {
       email: "",
       verificationCode: "",
       password: "",
+      accountType: "",
+      managerialPin: null,
     });
   };
 
@@ -154,11 +178,29 @@ export default function Login() {
     );
   }
 
+  if (currentScreen === "signUpAccountType") {
+    return (
+      <SignUpAccountType
+        onSubmit={handleAccountTypeSubmit}
+        onBack={() => setCurrentScreen("signUpBirthdate")}
+      />
+    );
+  }
+
+  if (currentScreen === "signUpManagerPin") {
+    return (
+      <SignUpManagerPin
+        onSubmit={handleManagerPinSubmit}
+        onBack={() => setCurrentScreen("signUpAccountType")}
+      />
+    );
+  }
+
   if (currentScreen === "signUpName") {
     return (
       <SignUpName
         onSubmit={handleNameSubmit}
-        onBack={() => setCurrentScreen("signUpBirthdate")}
+        onBack={() => setCurrentScreen("signUpAccountType")}
       />
     );
   }
