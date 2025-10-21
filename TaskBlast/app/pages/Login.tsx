@@ -12,6 +12,9 @@ import SignUpEmail from "./SignUpEmail";
 import SignUpVerifyEmail from "./SignUpVerifyEmail";
 import SignUpCreatePassword from "./SignUpCreatePassword";
 import HomeScreen from "./HomeScreen";
+import { auth, db, firestore} from "../../server/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 
 type Screen =
   | "login"
@@ -45,10 +48,23 @@ export default function Login() {
     accountType: "",
     managerialPin: null as string | null,
   });
+  const [signUpLoading, setSignUpLoading] = useState(false);
 
   const handleLogin = () => {
     // Handle login logic here
-    console.log("Login attempted with:", username, password);
+    signInWithEmailAndPassword(auth, username, password)
+      .then((userCredential) => {
+        // Signed in
+        const user = userCredential.user;
+        console.log("Login successful:", user.email);
+        setCurrentScreen("homeScreen");
+      })
+      .catch((error) => {
+        // display error to user here
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        console.error("Login error:", errorCode, errorMessage);
+      });
   };
 
   const handleForgotPassword = () => {
@@ -121,11 +137,66 @@ export default function Login() {
     setCurrentScreen("signUpCreatePassword");
   };
 
-  const handleSignUpPasswordSubmit = (password: string) => {
-    setSignUpData({ ...signUpData, password });
-    console.log("Sign up complete with data:", { ...signUpData, password });
-    // Navigate to home screen
-    setCurrentScreen("homeScreen");
+  const handleSignUpPasswordSubmit = async (password: string) => {
+    const payload = { ...signUpData, password };
+
+    if (!payload.email) {
+      console.error("Sign up error: email is required");
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      console.error("Sign up error: password must be at least 6 characters");
+      return;
+    }
+
+    setSignUpLoading(true);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, payload.email, password);
+      const user = userCredential.user;
+      console.log("Sign up successful:", user.email);
+
+      await updateProfile(user, {
+        displayName: `${payload.firstName} ${payload.lastName}`,
+      });
+
+      console.log("auth.currentUser uid:", auth.currentUser?.uid, "created user uid:", user.uid);
+
+      const userDocRef = doc(firestore, "users", user.uid);
+      try {
+        await setDoc(userDocRef, {
+          birthdate: payload.birthdate,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          email: payload.email,
+          accountType: payload.accountType,
+          managerialPin: payload.managerialPin,
+          createdAt: serverTimestamp(),
+        });
+      } catch (writeErr) {
+        console.error("Failed to write user document:", writeErr);
+        try {
+          await user.delete();
+          console.log("Deleted auth user due to Firestore write failure");
+        } catch (deleteErr) {
+          console.error("Failed to delete auth user after write failure:", deleteErr);
+        }
+        throw writeErr;
+      }
+
+      // Clear sensitive data from state
+      setSignUpData({ ...payload, password: "" });
+
+      console.log("Sign up complete with data:", { ...payload, password: "***" });
+      // Navigate to home screen
+      setCurrentScreen("homeScreen");
+    } catch (error: any) {
+      console.error("Sign up error:", error?.code ?? error?.message ?? error);
+      return;
+    } finally {
+      setSignUpLoading(false);
+    }
   };
 
   const handleBackToLoginFromSignUp = () => {
