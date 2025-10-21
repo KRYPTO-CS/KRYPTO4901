@@ -1,5 +1,13 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Image,
+} from "react-native";
 import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
 import VerifyCode from "./VerifyCode";
@@ -12,6 +20,13 @@ import SignUpEmail from "./SignUpEmail";
 import SignUpVerifyEmail from "./SignUpVerifyEmail";
 import SignUpCreatePassword from "./SignUpCreatePassword";
 import HomeScreen from "./HomeScreen";
+import { auth, db, firestore } from "../../server/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
 
 type Screen =
   | "login"
@@ -45,10 +60,39 @@ export default function Login() {
     accountType: "",
     managerialPin: null as string | null,
   });
+  const [signUpLoading, setSignUpLoading] = useState(false);
 
   const handleLogin = () => {
-    // Handle login logic here
-    console.log("Login attempted with:", username, password);
+    // Normalize inputs to make bypass resilient to whitespace/casing
+    const u = username.trim().toLowerCase();
+    const p = password.trim();
+
+    // Bypass login for testing (case-insensitive username, trim whitespace)
+    if (u === "admin" && p === "taskblaster") {
+      console.log("Bypass login successful");
+      setCurrentScreen("homeScreen");
+      return;
+    }
+
+    if (!u || !p) {
+      console.error("Login error: username and password are required");
+      return;
+    }
+
+    // Handle normal login logic here
+    signInWithEmailAndPassword(auth, username.trim(), p)
+      .then((userCredential) => {
+        // Signed in
+        const user = userCredential.user;
+        console.log("Login successful:", user.email);
+        setCurrentScreen("homeScreen");
+      })
+      .catch((error) => {
+        // display error to user here
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        console.error("Login error:", errorCode, errorMessage);
+      });
   };
 
   const handleForgotPassword = () => {
@@ -121,11 +165,81 @@ export default function Login() {
     setCurrentScreen("signUpCreatePassword");
   };
 
-  const handleSignUpPasswordSubmit = (password: string) => {
-    setSignUpData({ ...signUpData, password });
-    console.log("Sign up complete with data:", { ...signUpData, password });
-    // Navigate to home screen
-    setCurrentScreen("homeScreen");
+  const handleSignUpPasswordSubmit = async (password: string) => {
+    const payload = { ...signUpData, password };
+
+    if (!payload.email) {
+      console.error("Sign up error: email is required");
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      console.error("Sign up error: password must be at least 6 characters");
+      return;
+    }
+
+    setSignUpLoading(true);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        payload.email,
+        password
+      );
+      const user = userCredential.user;
+      console.log("Sign up successful:", user.email);
+
+      await updateProfile(user, {
+        displayName: `${payload.firstName} ${payload.lastName}`,
+      });
+
+      console.log(
+        "auth.currentUser uid:",
+        auth.currentUser?.uid,
+        "created user uid:",
+        user.uid
+      );
+
+      const userDocRef = doc(firestore, "users", user.uid);
+      try {
+        await setDoc(userDocRef, {
+          birthdate: payload.birthdate,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          email: payload.email,
+          accountType: payload.accountType,
+          managerialPin: payload.managerialPin,
+          createdAt: serverTimestamp(),
+        });
+      } catch (writeErr) {
+        console.error("Failed to write user document:", writeErr);
+        try {
+          await user.delete();
+          console.log("Deleted auth user due to Firestore write failure");
+        } catch (deleteErr) {
+          console.error(
+            "Failed to delete auth user after write failure:",
+            deleteErr
+          );
+        }
+        throw writeErr;
+      }
+
+      // Clear sensitive data from state
+      setSignUpData({ ...payload, password: "" });
+
+      console.log("Sign up complete with data:", {
+        ...payload,
+        password: "***",
+      });
+      // Navigate to home screen
+      setCurrentScreen("homeScreen");
+    } catch (error: any) {
+      console.error("Sign up error:", error?.code ?? error?.message ?? error);
+      return;
+    } finally {
+      setSignUpLoading(false);
+    }
   };
 
   const handleBackToLoginFromSignUp = () => {
@@ -238,61 +352,88 @@ export default function Login() {
   }
 
   return (
-    <View className="flex-1 bg-background items-center justify-center p-5">
-      {/* Logo Section */}
-      <View className="mb-12 items-center">
-        <Text className="text-6xl font-madimi text-primary">TaskBlast</Text>
-      </View>
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+      <View className="flex-1 bg-background items-center justify-center p-5">
+        {/* Logo Section */}
+        <View className="mb-12 items-center">
+          <Text className="text-6xl font-madimi text-primary">TaskBlast</Text>
+        </View>
 
-      {/* Login Container */}
-      <View className="w-full max-w-md bg-transparent rounded-xl p-8 border-2 border-gray-300 border-dashed">
-        <Text className="text-4xl font-madimi font-semibold text-text-primary mb-8 text-center">
-          Login
-        </Text>
+        {/* Login Container */}
+        <View className="w-full max-w-md bg-transparent rounded-xl p-8 border-2 border-gray-300 border-dashed">
+          <Text className="text-4xl font-madimi font-semibold text-text-primary mb-8 text-center">
+            Login
+          </Text>
 
-        <TextInput
-          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-4 text-base text-text-primary"
-          placeholder="Username"
-          placeholderTextColor="#999"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
+          <TextInput
+            className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-4 text-base text-text-primary"
+            placeholder="Username"
+            placeholderTextColor="#999"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+
+          <TextInput
+            className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-8 text-base text-text-primary margin-bottom-xxl"
+            placeholder="Password"
+            placeholderTextColor="#999"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+        </View>
+
+        <MainButton
+          title="Submit"
+          variant="primary"
+          size="medium"
+          customStyle={{ width: "60%", alignSelf: "center", marginTop: -15 }}
+          onPress={handleLogin}
         />
 
-        <TextInput
-          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-8 text-base text-text-primary margin-bottom-xxl"
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-        />
+        {/* Bottom Links */}
+        <View className="mt-8 items-center">
+          <TouchableOpacity onPress={handleSignUp} className="my-2">
+            <Text className="font-madimi text-sm text-text-secondary">
+              Don't have an account?{" "}
+              <Text className="font-semibold text-primary">Sign Up</Text>
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: "#ddd",
+              backgroundColor: "#fff",
+              padding: 10,
+              borderRadius: 5,
+            }}
+          >
+            <Image
+              source={{
+                uri: "https://developers.google.com/identity/images/g-logo.png",
+              }}
+              style={{
+                width: 20,
+                height: 20,
+                marginRight: 10,
+              }}
+            />
+            <Text>Sign in with Google</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleForgotPassword} className="my-2">
+            <Text className="font-madimi text-sm text-text-secondary">
+              Forgot Your Password?
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-
-      <MainButton
-        title="Submit"
-        variant="primary"
-        size="medium"
-        customStyle={{ width: "60%", alignSelf: "center", marginTop: -15 }}
-        onPress={handleLogin}
-      />
-
-      {/* Bottom Links */}
-      <View className="mt-8 items-center">
-        <TouchableOpacity onPress={handleSignUp} className="my-2">
-          <Text className="font-madimi text-sm text-text-secondary">
-            Don't have an account?{" "}
-            <Text className="font-semibold text-primary">Sign Up</Text>
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleForgotPassword} className="my-2">
-          <Text className="font-madimi text-sm text-text-secondary">
-            Forgot Your Password?
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </TouchableWithoutFeedback>
   );
 }

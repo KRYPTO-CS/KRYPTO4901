@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput } from "react-native";
+import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard } from "react-native";
 import MainButton from "../components/MainButton";
 
 interface SignUpBirthdateProps {
@@ -72,7 +72,8 @@ export default function SignUpBirthdate({
   };
 
   return (
-    <View className="flex-1 bg-background items-center justify-center p-5">
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+      <View className="flex-1 bg-background items-center justify-center p-5">
       {/* Birthdate Container */}
       <View className="w-full max-w-md bg-transparent rounded-xl p-8">
         <Text className="text-4xl font-madimi font-semibold text-text-primary mb-4 text-left">
@@ -96,6 +97,7 @@ export default function SignUpBirthdate({
               onChangeText={(text) => setMonth(text.replace(/[^0-9]/g, ""))}
               keyboardType="number-pad"
               maxLength={2}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -111,6 +113,7 @@ export default function SignUpBirthdate({
               onChangeText={(text) => setDay(text.replace(/[^0-9]/g, ""))}
               keyboardType="number-pad"
               maxLength={2}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
 
@@ -126,6 +129,7 @@ export default function SignUpBirthdate({
               onChangeText={(text) => setYear(text.replace(/[^0-9]/g, ""))}
               keyboardType="number-pad"
               maxLength={4}
+              onSubmitEditing={() => Keyboard.dismiss()}
             />
           </View>
         </View>
@@ -154,6 +158,7 @@ export default function SignUpBirthdate({
           Back to <Text className="font-semibold text-primary">Login</Text>
         </Text>
       </View>
-    </View>
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
