@@ -20,8 +20,12 @@ export default function GamePage() {
   const handleMessage = useCallback((event: any) => {
     try {
       const payload = JSON.parse(event.nativeEvent.data);
-      // handle messages here (example: gemsCollected)
-      console.log("Message from game:", payload);
+
+      if (payload.type === "scoreUpdate") {
+        console.log("Score from Godot:", payload);
+      } else {
+        console.log("Other message from game:", payload);
+      }
     } catch (err) {
       console.warn("Invalid message from WebView:", event.nativeEvent.data);
     }
@@ -37,7 +41,6 @@ export default function GamePage() {
             with your package manager and rebuild the app:
           </Text>
           <Text style={styles.command}>npm install react-native-webview</Text>
-          <Text style={styles.command}>npx pod-install (iOS)</Text>
         </View>
       </SafeAreaView>
     );
@@ -64,6 +67,7 @@ export default function GamePage() {
           startInLoadingState
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction={false}
+          javaScriptEnabled={true}
           onMessage={handleMessage}
           originWhitelist={["*"]}
         />
