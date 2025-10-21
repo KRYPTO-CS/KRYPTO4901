@@ -34,7 +34,12 @@ export default function HomeScreen() {
         <View className="flex-row justify-end items-center gap-4 mt-11">
           {/* Fuel Badge */}
           <View className="flex-row items-center bg-gradient-to-r from-orange-500 to-yellow-400 px-5 py-2.5 rounded-full shadow-lg shadow-orange-400/40 border-2 border-yellow-300/30">
-            <Ionicons name="flame" size={26} color="white" />
+            <Image
+              source={require("../../assets/images/fuel.png")}
+              className="w-7 h-7 mr-1"
+              resizeMode="contain"
+              style={{ transform: [{ scale: 2 }], marginBottom: 2 }}
+            />
             <Text className="font-orbitron-bold text-white text-md ml-2">
               20/20
             </Text>
@@ -42,7 +47,12 @@ export default function HomeScreen() {
 
           {/* Rocks */}
           <View className="flex-row items-center bg-gradient-to-r from-purple-600 to-pink-500 px-5 py-2.5 rounded-full shadow-lg shadow-purple-500/40 border-2 border-pink-300/30">
-            <Ionicons name="diamond" size={26} color="white" />
+            <Image
+              source={require("../../assets/images/Rocks.png")}
+              className="w-7 h-7 mr-1"
+              resizeMode="contain"
+              style={{ transform: [{ scale: 3 }] }}
+            />
             <Text className="font-orbitron-bold text-white text-md ml-2">
               0000
             </Text>
