@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+} from "react-native";
 import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
 import VerifyCode from "./VerifyCode";
@@ -12,9 +19,13 @@ import SignUpEmail from "./SignUpEmail";
 import SignUpVerifyEmail from "./SignUpVerifyEmail";
 import SignUpCreatePassword from "./SignUpCreatePassword";
 import HomeScreen from "./HomeScreen";
-import { auth, db, firestore} from "../../server/firebase";
+import { auth, db, firestore } from "../../server/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
 
 type Screen =
   | "login"
@@ -51,7 +62,14 @@ export default function Login() {
   const [signUpLoading, setSignUpLoading] = useState(false);
 
   const handleLogin = () => {
-    // Handle login logic here
+    // Bypass login for testing
+    if (username === "admin" && password === "taskblaster") {
+      console.log("Bypass login successful");
+      setCurrentScreen("homeScreen");
+      return;
+    }
+
+    // Handle normal login logic here
     signInWithEmailAndPassword(auth, username, password)
       .then((userCredential) => {
         // Signed in
@@ -153,7 +171,11 @@ export default function Login() {
     setSignUpLoading(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, payload.email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        payload.email,
+        password
+      );
       const user = userCredential.user;
       console.log("Sign up successful:", user.email);
 
@@ -161,7 +183,12 @@ export default function Login() {
         displayName: `${payload.firstName} ${payload.lastName}`,
       });
 
-      console.log("auth.currentUser uid:", auth.currentUser?.uid, "created user uid:", user.uid);
+      console.log(
+        "auth.currentUser uid:",
+        auth.currentUser?.uid,
+        "created user uid:",
+        user.uid
+      );
 
       const userDocRef = doc(firestore, "users", user.uid);
       try {
@@ -180,7 +207,10 @@ export default function Login() {
           await user.delete();
           console.log("Deleted auth user due to Firestore write failure");
         } catch (deleteErr) {
-          console.error("Failed to delete auth user after write failure:", deleteErr);
+          console.error(
+            "Failed to delete auth user after write failure:",
+            deleteErr
+          );
         }
         throw writeErr;
       }
@@ -188,7 +218,10 @@ export default function Login() {
       // Clear sensitive data from state
       setSignUpData({ ...payload, password: "" });
 
-      console.log("Sign up complete with data:", { ...payload, password: "***" });
+      console.log("Sign up complete with data:", {
+        ...payload,
+        password: "***",
+      });
       // Navigate to home screen
       setCurrentScreen("homeScreen");
     } catch (error: any) {
@@ -311,62 +344,62 @@ export default function Login() {
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
       <View className="flex-1 bg-background items-center justify-center p-5">
-      {/* Logo Section */}
-      <View className="mb-12 items-center">
-        <Text className="text-6xl font-madimi text-primary">TaskBlast</Text>
-      </View>
+        {/* Logo Section */}
+        <View className="mb-12 items-center">
+          <Text className="text-6xl font-madimi text-primary">TaskBlast</Text>
+        </View>
 
-      {/* Login Container */}
-      <View className="w-full max-w-md bg-transparent rounded-xl p-8 border-2 border-gray-300 border-dashed">
-        <Text className="text-4xl font-madimi font-semibold text-text-primary mb-8 text-center">
-          Login
-        </Text>
+        {/* Login Container */}
+        <View className="w-full max-w-md bg-transparent rounded-xl p-8 border-2 border-gray-300 border-dashed">
+          <Text className="text-4xl font-madimi font-semibold text-text-primary mb-8 text-center">
+            Login
+          </Text>
 
-        <TextInput
-          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-4 text-base text-text-primary"
-          placeholder="Username"
-          placeholderTextColor="#999"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-          onSubmitEditing={() => Keyboard.dismiss()}
+          <TextInput
+            className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-4 text-base text-text-primary"
+            placeholder="Username"
+            placeholderTextColor="#999"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+
+          <TextInput
+            className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-8 text-base text-text-primary margin-bottom-xxl"
+            placeholder="Password"
+            placeholderTextColor="#999"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            autoCapitalize="none"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+        </View>
+
+        <MainButton
+          title="Submit"
+          variant="primary"
+          size="medium"
+          customStyle={{ width: "60%", alignSelf: "center", marginTop: -15 }}
+          onPress={handleLogin}
         />
 
-        <TextInput
-          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-8 text-base text-text-primary margin-bottom-xxl"
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          onSubmitEditing={() => Keyboard.dismiss()}
-        />
-      </View>
+        {/* Bottom Links */}
+        <View className="mt-8 items-center">
+          <TouchableOpacity onPress={handleSignUp} className="my-2">
+            <Text className="font-madimi text-sm text-text-secondary">
+              Don't have an account?{" "}
+              <Text className="font-semibold text-primary">Sign Up</Text>
+            </Text>
+          </TouchableOpacity>
 
-      <MainButton
-        title="Submit"
-        variant="primary"
-        size="medium"
-        customStyle={{ width: "60%", alignSelf: "center", marginTop: -15 }}
-        onPress={handleLogin}
-      />
-
-      {/* Bottom Links */}
-      <View className="mt-8 items-center">
-        <TouchableOpacity onPress={handleSignUp} className="my-2">
-          <Text className="font-madimi text-sm text-text-secondary">
-            Don't have an account?{" "}
-            <Text className="font-semibold text-primary">Sign Up</Text>
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={handleForgotPassword} className="my-2">
-          <Text className="font-madimi text-sm text-text-secondary">
-            Forgot Your Password?
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity onPress={handleForgotPassword} className="my-2">
+            <Text className="font-madimi text-sm text-text-secondary">
+              Forgot Your Password?
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableWithoutFeedback>
   );
