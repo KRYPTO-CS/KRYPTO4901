@@ -63,15 +63,24 @@ export default function Login() {
   const [signUpLoading, setSignUpLoading] = useState(false);
 
   const handleLogin = () => {
-    // Bypass login for testing
-    if (username === "admin" && password === "taskblaster") {
+    // Normalize inputs to make bypass resilient to whitespace/casing
+    const u = username.trim().toLowerCase();
+    const p = password.trim();
+
+    // Bypass login for testing (case-insensitive username, trim whitespace)
+    if (u === "admin" && p === "taskblaster") {
       console.log("Bypass login successful");
       setCurrentScreen("homeScreen");
       return;
     }
 
+    if (!u || !p) {
+      console.error("Login error: username and password are required");
+      return;
+    }
+
     // Handle normal login logic here
-    signInWithEmailAndPassword(auth, username, password)
+    signInWithEmailAndPassword(auth, username.trim(), p)
       .then((userCredential) => {
         // Signed in
         const user = userCredential.user;
