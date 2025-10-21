@@ -36,6 +36,13 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# tailwind
+.tailwindcss-cache
+
+# editor
+.vscode/settings.json
+.idea/
+
 app-example
 
 # generated native folders
