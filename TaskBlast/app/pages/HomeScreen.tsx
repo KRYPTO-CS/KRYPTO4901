@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,8 +8,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
+import TaskListModal from "../components/TaskListModal";
 
 export default function HomeScreen() {
+  const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
+
   return (
     <ImageBackground
       source={require("../../assets/images/homeBackground.png")}
@@ -48,7 +51,10 @@ export default function HomeScreen() {
 
         {/* Task List Button - Aligned Right */}
         <View className="items-end mt-4 pr-0">
-          <TouchableOpacity className="flex-row  items-center px-6 py-3.5 rounded-2xl shadow-lg">
+          <TouchableOpacity
+            className="flex-row  items-center px-6 py-3.5 rounded-2xl shadow-lg"
+            onPress={() => setIsTaskModalVisible(true)}
+          >
             <Ionicons name="receipt-outline" size={26} color="white" />
           </TouchableOpacity>
         </View>
@@ -63,9 +69,15 @@ export default function HomeScreen() {
         </View>
 
         {/* Take Off Button - Bottom Center */}
-        <View className="items-center mb-20">
+        <View className="items-center mb-24">
           <MainButton title="Take Off" onPress={() => {}} />
         </View>
+
+        {/* Task List Modal */}
+        <TaskListModal
+          visible={isTaskModalVisible}
+          onClose={() => setIsTaskModalVisible(false)}
+        />
       </View>
     </ImageBackground>
   );
