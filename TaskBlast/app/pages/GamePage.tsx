@@ -10,7 +10,7 @@ try {
   WebView = null;
 }
 
-const GAME_URL = "https://jankosta.github.io/test-godot-game/";
+const GAME_URL = "https://krypto-cs.github.io/SpaceShooter/";
 
 export default function GamePage() {
   const [loading, setLoading] = useState(true);
