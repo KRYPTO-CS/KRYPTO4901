@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import { ActivityIndicator, StyleSheet, View, Text, Pressable } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -23,6 +24,15 @@ export default function GamePage() {
 
       if (payload.type === "scoreUpdate") {
         console.log("Score from Godot:", payload);
+        // Persist the score so HomeScreen can read it later. Temporary.
+        (async () => {
+          try {
+            const s = Number(payload.score) || 0;
+            await AsyncStorage.setItem('game_score', String(s));
+          } catch (err) {
+            console.warn('Failed to persist game score', err);
+          }
+        })();
       } else {
         console.log("Other message from game:", payload);
       }

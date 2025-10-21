@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,19 @@ import {
   Image,
   ImageBackground,
   Animated,
+  AppState,
 } from "react-native";
+import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
 import TaskListModal from "../components/TaskListModal";
+import { useRouter } from "expo-router";
 
 export default function HomeScreen() {
+  const router = useRouter();
   const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
+  const [rocks, setRocks] = useState<number>(0);
   const backgrounds = [
     require("../../assets/images/homeBackground.png"),
     require("../../assets/images/homeBackground2.png"),
@@ -39,6 +45,39 @@ export default function HomeScreen() {
     }, 3000);
     return () => clearInterval(interval);
   }, [nextBgIndex, fadeAnim]);
+
+  const loadScore = useCallback(async () => {
+    try {
+      const val = await AsyncStorage.getItem('game_score');
+      const n = val ? Number(val) : 0;
+      setRocks(isNaN(n) ? 0 : Math.max(0, Math.floor(n)));
+    } catch (err) {
+      console.warn('Failed to load game score', err);
+      setRocks(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadScore();
+
+    const handleAppState = (nextState: string) => {
+      if (nextState === 'active') {
+        loadScore();
+      }
+    };
+
+    const sub = AppState.addEventListener ? AppState.addEventListener('change', handleAppState) : undefined;
+
+    return () => {
+      if (sub && typeof sub.remove === 'function') sub.remove();
+    };
+  }, [loadScore]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadScore();
+    }, [loadScore])
+  );
 
   return (
     <View className="flex-1">
@@ -102,7 +141,7 @@ export default function HomeScreen() {
               style={{ transform: [{ scale: 3 }] }}
             />
             <Text className="font-orbitron-bold text-white text-md ml-2">
-              0000
+              {String(rocks).padStart(4, '0')}
             </Text>
           </View>
         </View>
@@ -128,7 +167,10 @@ export default function HomeScreen() {
 
         {/* Take Off Button - Bottom Center */}
         <View className="items-center mb-24">
-          <MainButton title="Take Off" onPress={() => {}} />
+          <MainButton
+            title="Take Off"
+            onPress={() => router.push("/pages/GamePage")}
+          />
         </View>
 
         {/* Task List Modal */}
