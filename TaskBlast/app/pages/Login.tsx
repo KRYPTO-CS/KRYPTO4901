@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   Keyboard,
+  Image,
 } from "react-native";
 import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
@@ -394,6 +395,29 @@ export default function Login() {
             </Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: "#ddd",
+              backgroundColor: "#fff",
+              padding: 10,
+              borderRadius: 5,
+            }}
+          >
+            <Image
+              source={{
+                uri: "https://developers.google.com/identity/images/g-logo.png",
+              }}
+              style={{
+                width: 20,
+                height: 20,
+                marginRight: 10,
+              }}
+            />
+            <Text>Sign in with Google</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={handleForgotPassword} className="my-2">
             <Text className="font-madimi text-sm text-text-secondary">
               Forgot Your Password?
