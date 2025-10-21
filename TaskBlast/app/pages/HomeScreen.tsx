@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   Image,
   ImageBackground,
+  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
@@ -12,13 +13,60 @@ import TaskListModal from "../components/TaskListModal";
 
 export default function HomeScreen() {
   const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
+  const backgrounds = [
+    require("../../assets/images/homeBackground.png"),
+    require("../../assets/images/homeBackground2.png"),
+    require("../../assets/images/homeBackground3.png"),
+  ];
+  const [bgIndex, setBgIndex] = useState(0);
+  const [nextBgIndex, setNextBgIndex] = useState(1);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [showNext, setShowNext] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setShowNext(true);
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }).start(() => {
+        setBgIndex(nextBgIndex);
+        setNextBgIndex((nextBgIndex + 1) % backgrounds.length);
+        setShowNext(false);
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [nextBgIndex, fadeAnim]);
 
   return (
-    <ImageBackground
-      source={require("../../assets/images/homeBackground.png")}
-      className="flex-1"
-      resizeMode="cover"
-    >
+    <View className="flex-1">
+      {/* Current background always visible */}
+      <ImageBackground
+        source={backgrounds[bgIndex]}
+        className="absolute inset-0 w-full h-full"
+        resizeMode="cover"
+      />
+      {/* Next background fades in over current */}
+      {showNext && (
+        <Animated.View
+          style={{
+            position: "absolute",
+            width: "100%",
+            height: "100%",
+            opacity: fadeAnim,
+          }}
+          pointerEvents="none"
+        >
+          <ImageBackground
+            source={backgrounds[nextBgIndex]}
+            className="flex-1"
+            resizeMode="cover"
+          />
+        </Animated.View>
+      )}
+      {/* All UI elements above the background */}
       <View className="flex-1 p-5">
         {/* Top Left Section - Profile & Settings */}
         <View className="absolute top-20 left-5 z-10">
@@ -89,6 +137,6 @@ export default function HomeScreen() {
           onClose={() => setIsTaskModalVisible(false)}
         />
       </View>
-    </ImageBackground>
+    </View>
   );
 }
