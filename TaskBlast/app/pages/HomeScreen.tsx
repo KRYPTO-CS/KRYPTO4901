@@ -176,7 +176,7 @@ export default function HomeScreen() {
         <View className="items-center mb-24">
           <MainButton
             title="Take Off"
-            onPress={() => router.push("/pages/GamePage")}
+            onPress={() => router.push("/pages/PomodoroScreen")}
           />
         </View>
 
