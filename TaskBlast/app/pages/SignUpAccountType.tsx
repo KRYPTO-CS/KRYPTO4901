@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, ImageBackground, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ImageBackground,
+  Animated,
+} from "react-native";
 import MainButton from "../components/MainButton";
 
 interface SignUpAccountTypeProps {
@@ -7,8 +13,13 @@ interface SignUpAccountTypeProps {
   onBack: () => void;
 }
 
-export default function SignUpAccountType({ onSubmit, onBack }: SignUpAccountTypeProps) {
-  const [selected, setSelected] = useState<"managed" | "independent" | null>(null);
+export default function SignUpAccountType({
+  onSubmit,
+  onBack,
+}: SignUpAccountTypeProps) {
+  const [selected, setSelected] = useState<"managed" | "independent" | null>(
+    null
+  );
   const [error, setError] = useState("");
 
   // Background animation
@@ -64,7 +75,9 @@ export default function SignUpAccountType({ onSubmit, onBack }: SignUpAccountTyp
         activeOpacity={0.8}
         onPress={() => setSelected(value)}
         className={`w-full p-4 rounded-2xl border-2 ${
-          active ? "border-yellow-300 bg-yellow-300/20" : "border-white/40 bg-white/10"
+          active
+            ? "border-yellow-300 bg-yellow-300/20"
+            : "border-white/40 bg-white/10"
         }`}
         style={{ marginBottom: 12 }}
       >
@@ -111,7 +124,8 @@ export default function SignUpAccountType({ onSubmit, onBack }: SignUpAccountTyp
           </Text>
 
           <Text className="font-madimi text-sm text-white/90 mb-6 text-left">
-            Choose the account type that best describes the primary user of TaskBlask.
+            Choose the account type that best describes the primary user of
+            TaskBlask.
           </Text>
 
           <Option
@@ -127,14 +141,20 @@ export default function SignUpAccountType({ onSubmit, onBack }: SignUpAccountTyp
           />
 
           {error ? (
-            <Text className="font-madimi text-sm text-red-300 mb-4 text-left drop-shadow-md">{error}</Text>
+            <Text className="font-madimi text-sm text-red-300 mb-4 text-left drop-shadow-md">
+              {error}
+            </Text>
           ) : null}
 
           <MainButton
             title="Continue"
             variant="primary"
             size="medium"
-            customStyle={{ width: "60%", alignSelf: "flex-start", marginTop: 10 }}
+            customStyle={{
+              width: "60%",
+              alignSelf: "flex-start",
+              marginTop: 10,
+            }}
             onPress={handleContinue}
           />
 
@@ -143,7 +163,10 @@ export default function SignUpAccountType({ onSubmit, onBack }: SignUpAccountTyp
               className="font-madimi text-sm text-white drop-shadow-md cursor-pointer"
               onPress={onBack}
             >
-              Back to <Text className="font-semibold text-yellow-300">Previous Step</Text>
+              Back to{" "}
+              <Text className="font-semibold text-yellow-300">
+                Previous Step
+              </Text>
             </Text>
           </View>
         </View>

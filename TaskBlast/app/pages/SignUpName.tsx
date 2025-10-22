@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, ImageBackground, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ImageBackground,
+  Animated,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
 
@@ -95,7 +103,12 @@ export default function SignUpName({ onSubmit, onBack }: SignUpNameProps) {
 
             <View className="mb-4">
               <View className="flex-row items-center bg-white/20 border-2 border-white/40 rounded-2xl px-4 h-14 shadow-lg">
-                <Ionicons name="person-outline" size={22} color="white" style={{ marginRight: 10 }} />
+                <Ionicons
+                  name="person-outline"
+                  size={22}
+                  color="white"
+                  style={{ marginRight: 10 }}
+                />
                 <TextInput
                   className="font-madimi flex-1 text-base text-white"
                   placeholder="First Name"
@@ -110,7 +123,12 @@ export default function SignUpName({ onSubmit, onBack }: SignUpNameProps) {
 
             <View className="mb-4">
               <View className="flex-row items-center bg-white/20 border-2 border-white/40 rounded-2xl px-4 h-14 shadow-lg">
-                <Ionicons name="person-outline" size={22} color="white" style={{ marginRight: 10 }} />
+                <Ionicons
+                  name="person-outline"
+                  size={22}
+                  color="white"
+                  style={{ marginRight: 10 }}
+                />
                 <TextInput
                   className="font-madimi flex-1 text-base text-white"
                   placeholder="Last Name"
@@ -133,7 +151,11 @@ export default function SignUpName({ onSubmit, onBack }: SignUpNameProps) {
               title="Continue"
               variant="primary"
               size="medium"
-              customStyle={{ width: "60%", alignSelf: "flex-start", marginTop: 10 }}
+              customStyle={{
+                width: "60%",
+                alignSelf: "flex-start",
+                marginTop: 10,
+              }}
               onPress={handleSubmit}
             />
           </View>
@@ -145,7 +167,9 @@ export default function SignUpName({ onSubmit, onBack }: SignUpNameProps) {
               onPress={onBack}
             >
               Back to{" "}
-              <Text className="font-semibold text-yellow-300">Previous Step</Text>
+              <Text className="font-semibold text-yellow-300">
+                Previous Step
+              </Text>
             </Text>
           </View>
         </View>

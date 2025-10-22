@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, ImageBackground, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ImageBackground,
+  Animated,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
 
@@ -108,7 +116,12 @@ export default function SignUpCreatePassword({
 
             <View className="mb-4">
               <View className="flex-row items-center bg-white/20 border-2 border-white/40 rounded-2xl px-4 h-14 shadow-lg">
-                <Ionicons name="lock-closed-outline" size={22} color="white" style={{ marginRight: 10 }} />
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={22}
+                  color="white"
+                  style={{ marginRight: 10 }}
+                />
                 <TextInput
                   className="font-madimi flex-1 text-base text-white"
                   placeholder="Password"
@@ -124,7 +137,12 @@ export default function SignUpCreatePassword({
 
             <View className="mb-4">
               <View className="flex-row items-center bg-white/20 border-2 border-white/40 rounded-2xl px-4 h-14 shadow-lg">
-                <Ionicons name="lock-closed-outline" size={22} color="white" style={{ marginRight: 10 }} />
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={22}
+                  color="white"
+                  style={{ marginRight: 10 }}
+                />
                 <TextInput
                   className="font-madimi flex-1 text-base text-white"
                   placeholder="Confirm Password"
@@ -164,7 +182,9 @@ export default function SignUpCreatePassword({
               onPress={onBack}
             >
               Back to{" "}
-              <Text className="font-semibold text-yellow-300">Previous Step</Text>
+              <Text className="font-semibold text-yellow-300">
+                Previous Step
+              </Text>
             </Text>
           </View>
         </View>

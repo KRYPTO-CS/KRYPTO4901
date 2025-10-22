@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, ImageBackground, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ImageBackground,
+  Animated,
+} from "react-native";
 import MainButton from "../components/MainButton";
 
 interface VerifyCodeProps {
@@ -157,7 +165,11 @@ export default function VerifyCode({
               title="Submit"
               variant="primary"
               size="medium"
-              customStyle={{ width: "60%", alignSelf: "flex-start", marginTop: 10 }}
+              customStyle={{
+                width: "60%",
+                alignSelf: "flex-start",
+                marginTop: 10,
+              }}
               onPress={handleSubmit}
             />
           </View>
@@ -169,7 +181,9 @@ export default function VerifyCode({
               onPress={onBack}
             >
               Back to{" "}
-              <Text className="font-semibold text-yellow-300">Previous Step</Text>
+              <Text className="font-semibold text-yellow-300">
+                Previous Step
+              </Text>
             </Text>
           </View>
         </View>

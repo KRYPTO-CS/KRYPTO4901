@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, ImageBackground, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ImageBackground,
+  Animated,
+} from "react-native";
 import MainButton from "../components/MainButton";
 
 interface SignUpVerifyEmailProps {
@@ -155,7 +163,10 @@ export default function SignUpVerifyEmail({
 
             <Text className="font-madimi text-xs text-white/80 text-left mb-4">
               Didn't receive the code?{" "}
-              <Text className="font-semibold text-yellow-300" onPress={handleResend}>
+              <Text
+                className="font-semibold text-yellow-300"
+                onPress={handleResend}
+              >
                 Resend
               </Text>
             </Text>
@@ -164,7 +175,11 @@ export default function SignUpVerifyEmail({
               title="Verify"
               variant="primary"
               size="medium"
-              customStyle={{ width: "60%", alignSelf: "flex-start", marginTop: 10 }}
+              customStyle={{
+                width: "60%",
+                alignSelf: "flex-start",
+                marginTop: 10,
+              }}
               onPress={handleSubmit}
             />
           </View>
@@ -176,7 +191,9 @@ export default function SignUpVerifyEmail({
               onPress={onBack}
             >
               Back to{" "}
-              <Text className="font-semibold text-yellow-300">Previous Step</Text>
+              <Text className="font-semibold text-yellow-300">
+                Previous Step
+              </Text>
             </Text>
           </View>
         </View>

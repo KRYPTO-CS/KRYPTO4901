@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard, ImageBackground, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ImageBackground,
+  Animated,
+} from "react-native";
 import MainButton from "../components/MainButton";
 
 interface SignUpBirthdateProps {
@@ -199,7 +207,11 @@ export default function SignUpBirthdate({
               title="Continue"
               variant="primary"
               size="medium"
-              customStyle={{ width: "60%", alignSelf: "flex-start", marginTop: 10 }}
+              customStyle={{
+                width: "60%",
+                alignSelf: "flex-start",
+                marginTop: 10,
+              }}
               onPress={handleSubmit}
             />
           </View>
@@ -210,7 +222,8 @@ export default function SignUpBirthdate({
               className="font-madimi text-sm text-white drop-shadow-md cursor-pointer"
               onPress={onBack}
             >
-              Back to <Text className="font-semibold text-yellow-300">Login</Text>
+              Back to{" "}
+              <Text className="font-semibold text-yellow-300">Login</Text>
             </Text>
           </View>
         </View>
