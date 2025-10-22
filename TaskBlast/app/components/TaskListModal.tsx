@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -142,7 +143,12 @@ export default function TaskListModal({
                     {task.name}
                   </Text>
                   <View className="flex-row items-center mt-1">
-                    <Ionicons name="diamond" size={16} color="#a78bfa" />
+                    <Image
+                      source={require("../../assets/images/Rocks.png")}
+                      className="w-7 h-7 mr-1"
+                      resizeMode="contain"
+                      style={{ transform: [{ scale: 2.5 }] }}
+                    />
                     <Text className="font-orbitron-bold text-purple-300 text-sm ml-1">
                       {task.reward}
                     </Text>
