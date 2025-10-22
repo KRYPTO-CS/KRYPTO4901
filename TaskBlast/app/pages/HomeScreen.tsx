@@ -8,8 +8,8 @@ import {
   Animated,
   AppState,
 } from "react-native";
-import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
 import TaskListModal from "../components/TaskListModal";
@@ -48,11 +48,11 @@ export default function HomeScreen() {
 
   const loadScore = useCallback(async () => {
     try {
-      const val = await AsyncStorage.getItem('game_score');
+      const val = await AsyncStorage.getItem("game_score");
       const n = val ? Number(val) : 0;
       setRocks(isNaN(n) ? 0 : Math.max(0, Math.floor(n)));
     } catch (err) {
-      console.warn('Failed to load game score', err);
+      console.warn("Failed to load game score", err);
       setRocks(0);
     }
   }, []);
@@ -61,15 +61,17 @@ export default function HomeScreen() {
     loadScore();
 
     const handleAppState = (nextState: string) => {
-      if (nextState === 'active') {
+      if (nextState === "active") {
         loadScore();
       }
     };
 
-    const sub = AppState.addEventListener ? AppState.addEventListener('change', handleAppState) : undefined;
+    const sub = AppState.addEventListener
+      ? AppState.addEventListener("change", handleAppState)
+      : undefined;
 
     return () => {
-      if (sub && typeof sub.remove === 'function') sub.remove();
+      if (sub && typeof sub.remove === "function") sub.remove();
     };
   }, [loadScore]);
 
@@ -141,7 +143,7 @@ export default function HomeScreen() {
               style={{ transform: [{ scale: 3 }] }}
             />
             <Text className="font-orbitron-bold text-white text-md ml-2">
-              {String(rocks).padStart(4, '0')}
+              {String(rocks).padStart(4, "0")}
             </Text>
           </View>
         </View>
@@ -152,7 +154,12 @@ export default function HomeScreen() {
             className="flex-row  items-center px-6 py-3.5 rounded-2xl shadow-lg"
             onPress={() => setIsTaskModalVisible(true)}
           >
-            <Ionicons name="receipt-outline" size={26} color="white" />
+            <Image
+              source={require("../../assets/images/Task.png")}
+              className="w-7 h-7 mt-2"
+              resizeMode="contain"
+              style={{ transform: [{ scale: 3.8 }] }}
+            />
           </TouchableOpacity>
         </View>
 
