@@ -13,7 +13,7 @@ import SignUpVerifyEmail from "./SignUpVerifyEmail";
 import SignUpCreatePassword from "./SignUpCreatePassword";
 import HomeScreen from "./HomeScreen";
 import { auth, db, firestore} from "../../server/firebase";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 
 type Screen =
@@ -36,6 +36,8 @@ export default function Login() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
   const [resetEmail, setResetEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [signUpLoading, setSignUpLoading] = useState(false); // maybe add some sort of loading bar
+  const [loginLoading, setLoginLoading] = useState(false);
 
   // Sign up state
   const [signUpData, setSignUpData] = useState({
@@ -48,23 +50,39 @@ export default function Login() {
     accountType: "",
     managerialPin: null as string | null,
   });
-  const [signUpLoading, setSignUpLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Handle login logic here
-    signInWithEmailAndPassword(auth, username, password)
-      .then((userCredential) => {
-        // Signed in
-        const user = userCredential.user;
-        console.log("Login successful:", user.email);
-        setCurrentScreen("homeScreen");
-      })
-      .catch((error) => {
-        // display error to user here
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        console.error("Login error:", errorCode, errorMessage);
-      });
+  const handleLogin = async () => {
+    setLoginLoading(true);
+    try {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      let loginEmail = username;
+
+      if (!emailRegex.test(username)) {
+        const usersCollection = collection(firestore, "users");
+        const unameQuery = query(usersCollection, where("username", "==", username));
+        const querySnapshot = await getDocs(unameQuery);
+
+        if (querySnapshot.empty) {
+          console.error("Invalid username or password");
+          return;
+        }
+
+        const userInfo = querySnapshot.docs[0].data() as any;
+        if (!userInfo.email) {
+          console.error("User record has no email");
+          return;
+        }
+        loginEmail = userInfo.email;
+      }
+
+      const userCredential = await signInWithEmailAndPassword(auth, loginEmail, password);
+      console.log("Login successful:", userCredential.user.email);
+      setCurrentScreen("homeScreen");
+    } catch (error: any) {
+      console.error("Login error:", error?.code ?? error?.message ?? error);
+    } finally {
+      setLoginLoading(false);
+    }
   };
 
   const handleForgotPassword = () => {
