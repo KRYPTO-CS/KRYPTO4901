@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import MainButton from "../components/MainButton";
-import { Audio } from "expo-av";
+import { useAudioPlayer } from "expo-audio";
 
 export default function PomodoroScreen() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function PomodoroScreen() {
   const [showNext, setShowNext] = useState(false);
 
   // Music state
-  const soundRef = useRef<Audio.Sound | null>(null);
+  const player = useAudioPlayer(require("../../assets/music/pomodoroLoop.mp3"));
 
   // Player floating animation
   const floatAnim = useRef(new Animated.Value(0)).current;
@@ -75,41 +75,12 @@ export default function PomodoroScreen() {
     return () => floatAnimation.stop();
   }, [floatAnim]);
 
-  // Load and play music
+  // Play music on mount
   useEffect(() => {
-    let isMounted = true;
-
-    const loadAndPlayMusic = async () => {
-      try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          shouldDuckAndroid: true,
-        });
-
-        const { sound } = await Audio.Sound.createAsync(
-          // Add your music file here, e.g.:
-          // require("../../assets/music/pomodoro-music.mp3"),
-          // For now, using a placeholder - replace with your actual music file
-          require("../../assets/music/pomodoroLoop.mp3"),
-          { shouldPlay: true, isLooping: true, volume: 0.5 }
-        );
-
-        if (isMounted) {
-          soundRef.current = sound;
-        }
-      } catch (error) {
-        console.warn("Failed to load music:", error);
-      }
-    };
-
-    loadAndPlayMusic();
-
+    player.play();
     return () => {
-      isMounted = false;
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
-      }
+      // Cleanup is handled by expo-audio automatically
+      // Don't manually pause/seek in cleanup to avoid stale reference issues
     };
   }, []);
 
@@ -123,8 +94,10 @@ export default function PomodoroScreen() {
           if (prev <= 1) {
             // Timer finished
             setIsRunning(false);
-            if (soundRef.current) {
-              soundRef.current.stopAsync();
+            try {
+              player.pause();
+            } catch (e) {
+              console.warn("Audio player error on timer finish:", e);
             }
             router.push("/pages/GamePage");
             return 0;
@@ -160,13 +133,17 @@ export default function PomodoroScreen() {
   const handlePauseLand = async () => {
     if (!isPaused) {
       setIsPaused(true);
-      if (soundRef.current) {
-        await soundRef.current.pauseAsync();
+      try {
+        player.pause();
+      } catch (e) {
+        console.warn("Audio player pause error:", e);
       }
     } else {
       // Land - go back to home
-      if (soundRef.current) {
-        await soundRef.current.stopAsync();
+      try {
+        player.pause();
+      } catch (e) {
+        console.warn("Audio player error on land:", e);
       }
       router.back();
     }
