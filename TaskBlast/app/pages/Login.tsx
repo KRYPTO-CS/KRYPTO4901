@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Image } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Image, Modal, ActivityIndicator } from "react-native";
 import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
 import VerifyCode from "./VerifyCode";
@@ -409,6 +409,18 @@ export default function Login() {
 
         </TouchableOpacity>
       </View>
+
+            {(loginLoading || signUpLoading) && (
+              <Modal visible transparent animationType="fade">
+                <View>
+                  <ActivityIndicator size="large"/>
+                  <Text>
+                    {loginLoading ? "Logging in..." : "Signing up..."}
+                  </Text>
+                </View>
+              </Modal> 
+            )}
+
       </View>
     </TouchableWithoutFeedback>
   );
