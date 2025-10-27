@@ -1,5 +1,16 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Image,
+  ImageBackground,
+  Animated,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
 import VerifyCode from "./VerifyCode";
@@ -12,6 +23,13 @@ import SignUpEmail from "./SignUpEmail";
 import SignUpVerifyEmail from "./SignUpVerifyEmail";
 import SignUpCreatePassword from "./SignUpCreatePassword";
 import HomeScreen from "./HomeScreen";
+import { auth, db, firestore } from "../../server/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
 
 type Screen =
   | "login"
@@ -34,6 +52,34 @@ export default function Login() {
   const [resetEmail, setResetEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
 
+  // Background animation
+  const backgrounds = [
+    require("../../assets/images/homeBackground.png"),
+    require("../../assets/images/homeBackground2.png"),
+    require("../../assets/images/homeBackground3.png"),
+  ];
+  const [bgIndex, setBgIndex] = useState(0);
+  const [nextBgIndex, setNextBgIndex] = useState(1);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [showNext, setShowNext] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setShowNext(true);
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 700,
+        useNativeDriver: true,
+      }).start(() => {
+        setBgIndex(nextBgIndex);
+        setNextBgIndex((nextBgIndex + 1) % backgrounds.length);
+        setShowNext(false);
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [nextBgIndex, fadeAnim]);
+
   // Sign up state
   const [signUpData, setSignUpData] = useState({
     birthdate: "",
@@ -45,10 +91,39 @@ export default function Login() {
     accountType: "",
     managerialPin: null as string | null,
   });
+  const [signUpLoading, setSignUpLoading] = useState(false);
 
   const handleLogin = () => {
-    // Handle login logic here
-    console.log("Login attempted with:", username, password);
+    // Normalize inputs to make bypass resilient to whitespace/casing
+    const u = username.trim().toLowerCase();
+    const p = password.trim();
+
+    // Bypass login for testing (case-insensitive username, trim whitespace)
+    if (u === "admin" && p === "taskblaster") {
+      console.log("Bypass login successful");
+      setCurrentScreen("homeScreen");
+      return;
+    }
+
+    if (!u || !p) {
+      console.error("Login error: username and password are required");
+      return;
+    }
+
+    // Handle normal login logic here
+    signInWithEmailAndPassword(auth, username.trim(), p)
+      .then((userCredential) => {
+        // Signed in
+        const user = userCredential.user;
+        console.log("Login successful:", user.email);
+        setCurrentScreen("homeScreen");
+      })
+      .catch((error) => {
+        // display error to user here
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        console.error("Login error:", errorCode, errorMessage);
+      });
   };
 
   const handleForgotPassword = () => {
@@ -121,11 +196,81 @@ export default function Login() {
     setCurrentScreen("signUpCreatePassword");
   };
 
-  const handleSignUpPasswordSubmit = (password: string) => {
-    setSignUpData({ ...signUpData, password });
-    console.log("Sign up complete with data:", { ...signUpData, password });
-    // Navigate to home screen
-    setCurrentScreen("homeScreen");
+  const handleSignUpPasswordSubmit = async (password: string) => {
+    const payload = { ...signUpData, password };
+
+    if (!payload.email) {
+      console.error("Sign up error: email is required");
+      return;
+    }
+
+    if (!password || password.length < 6) {
+      console.error("Sign up error: password must be at least 6 characters");
+      return;
+    }
+
+    setSignUpLoading(true);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        payload.email,
+        password
+      );
+      const user = userCredential.user;
+      console.log("Sign up successful:", user.email);
+
+      await updateProfile(user, {
+        displayName: `${payload.firstName} ${payload.lastName}`,
+      });
+
+      console.log(
+        "auth.currentUser uid:",
+        auth.currentUser?.uid,
+        "created user uid:",
+        user.uid
+      );
+
+      const userDocRef = doc(firestore, "users", user.uid);
+      try {
+        await setDoc(userDocRef, {
+          birthdate: payload.birthdate,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          email: payload.email,
+          accountType: payload.accountType,
+          managerialPin: payload.managerialPin,
+          createdAt: serverTimestamp(),
+        });
+      } catch (writeErr) {
+        console.error("Failed to write user document:", writeErr);
+        try {
+          await user.delete();
+          console.log("Deleted auth user due to Firestore write failure");
+        } catch (deleteErr) {
+          console.error(
+            "Failed to delete auth user after write failure:",
+            deleteErr
+          );
+        }
+        throw writeErr;
+      }
+
+      // Clear sensitive data from state
+      setSignUpData({ ...payload, password: "" });
+
+      console.log("Sign up complete with data:", {
+        ...payload,
+        password: "***",
+      });
+      // Navigate to home screen
+      setCurrentScreen("homeScreen");
+    } catch (error: any) {
+      console.error("Sign up error:", error?.code ?? error?.message ?? error);
+      return;
+    } finally {
+      setSignUpLoading(false);
+    }
   };
 
   const handleBackToLoginFromSignUp = () => {
@@ -239,63 +384,151 @@ export default function Login() {
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <View className="flex-1 bg-background items-center justify-center p-5">
-      {/* Logo Section */}
-      <View className="mb-12 items-center">
-        <Text className="text-6xl font-madimi text-primary">TaskBlast</Text>
-      </View>
-
-      {/* Login Container */}
-      <View className="w-full max-w-md bg-transparent rounded-xl p-8 border-2 border-gray-300 border-dashed">
-        <Text className="text-4xl font-madimi font-semibold text-text-primary mb-8 text-center">
-          Login
-        </Text>
-
-        <TextInput
-          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-4 text-base text-text-primary"
-          placeholder="Username"
-          placeholderTextColor="#999"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-          onSubmitEditing={() => Keyboard.dismiss()}
+      <View className="flex-1">
+        {/* Current background always visible */}
+        <ImageBackground
+          source={backgrounds[bgIndex]}
+          className="absolute inset-0 w-full h-full"
+          resizeMode="cover"
         />
+        {/* Next background fades in over current */}
+        {showNext && (
+          <Animated.View
+            style={{
+              position: "absolute",
+              width: "100%",
+              height: "100%",
+              opacity: fadeAnim,
+            }}
+            pointerEvents="none"
+          >
+            <ImageBackground
+              source={backgrounds[nextBgIndex]}
+              className="flex-1"
+              resizeMode="cover"
+            />
+          </Animated.View>
+        )}
 
-        <TextInput
-          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-8 text-base text-text-primary margin-bottom-xxl"
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          onSubmitEditing={() => Keyboard.dismiss()}
-        />
-      </View>
+        {/* Content overlay */}
+        <View className="flex-1 items-center justify-center p-5">
+          {/* Logo Section */}
+          <View className="mb-12 items-center">
+            <Text
+              className="text-6xl font-madimi text-white drop-shadow-lg"
+              style={{
+                textShadowColor: "rgba(0,0,0,0.3)",
+                textShadowOffset: { width: 2, height: 2 },
+                textShadowRadius: 4,
+              }}
+            >
+              TaskBlast
+            </Text>
+          </View>
 
-      <MainButton
-        title="Submit"
-        variant="primary"
-        size="medium"
-        customStyle={{ width: "60%", alignSelf: "center", marginTop: -15 }}
-        onPress={handleLogin}
-      />
+          {/* Login Container */}
+          <View className="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-3xl p-8 border-2 border-white/30 shadow-2xl">
+            <Text className="text-4xl font-madimi font-semibold text-white mb-8 text-center drop-shadow-md">
+              Login
+            </Text>
 
-      {/* Bottom Links */}
-      <View className="mt-8 items-center">
-        <TouchableOpacity onPress={handleSignUp} className="my-2">
-          <Text className="font-madimi text-sm text-text-secondary">
-            Don't have an account?{" "}
-            <Text className="font-semibold text-primary">Sign Up</Text>
-          </Text>
-        </TouchableOpacity>
+            <View className="mb-4">
+              <View className="flex-row items-center bg-white/20 border-2 border-white/40 rounded-2xl px-4 h-14 shadow-lg">
+                <Ionicons
+                  name="person-outline"
+                  size={22}
+                  color="white"
+                  style={{ marginRight: 10 }}
+                />
+                <TextInput
+                  className="font-madimi flex-1 text-base text-white"
+                  placeholder="Username"
+                  placeholderTextColor="rgba(255,255,255,0.6)"
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                />
+              </View>
+            </View>
 
-        <TouchableOpacity onPress={handleForgotPassword} className="my-2">
-          <Text className="font-madimi text-sm text-text-secondary">
-            Forgot Your Password?
-          </Text>
-        </TouchableOpacity>
-      </View>
+            <View className="mb-8">
+              <View className="flex-row items-center bg-white/20 border-2 border-white/40 rounded-2xl px-4 h-14 shadow-lg">
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={22}
+                  color="white"
+                  style={{ marginRight: 10 }}
+                />
+                <TextInput
+                  className="font-madimi flex-1 text-base text-white"
+                  placeholder="Password"
+                  placeholderTextColor="rgba(255,255,255,0.6)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                />
+              </View>
+            </View>
+          </View>
+
+          <MainButton
+            title="Submit"
+            variant="primary"
+            size="medium"
+            customStyle={{ width: "60%", alignSelf: "center", marginTop: -15 }}
+            onPress={handleLogin}
+          />
+
+          {/* Bottom Links */}
+          <View className="mt-8 items-center">
+            <TouchableOpacity onPress={handleSignUp} className="my-2">
+              <Text className="font-madimi text-sm text-white drop-shadow-md">
+                Don't have an account?{" "}
+                <Text className="font-semibold text-yellow-300">Sign Up</Text>
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                borderWidth: 2,
+                borderColor: "rgba(255,255,255,0.4)",
+                backgroundColor: "rgba(255,255,255,0.15)",
+                padding: 12,
+                borderRadius: 16,
+                marginVertical: 8,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+              }}
+            >
+              <Image
+                source={{
+                  uri: "https://developers.google.com/identity/images/g-logo.png",
+                }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  marginRight: 10,
+                }}
+              />
+              <Text className="font-madimi text-white">
+                Sign in with Google
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleForgotPassword} className="my-2">
+              <Text className="font-madimi text-sm text-white/80 drop-shadow-md">
+                Forgot Your Password?
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     </TouchableWithoutFeedback>
   );

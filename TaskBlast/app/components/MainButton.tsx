@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import {
   TouchableOpacity,
   Text,
@@ -9,6 +9,7 @@ import {
   Animated,
   Pressable,
 } from "react-native";
+import { useAudioPlayer } from "expo-audio";
 import { buttons, buttonText } from "../styles/global";
 
 type ButtonVariant =
@@ -27,6 +28,7 @@ interface MainButtonProps extends TouchableOpacityProps {
   size?: ButtonSize;
   customStyle?: ViewStyle;
   textStyle?: TextStyle;
+  playSoundOnPress?: boolean; // Option to enable/disable sound
 }
 
 export default function MainButton({
@@ -35,11 +37,17 @@ export default function MainButton({
   size = "medium",
   customStyle,
   textStyle,
+  playSoundOnPress = true, // Default to true
   ...props
 }: MainButtonProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const translateYAnim = useRef(new Animated.Value(0)).current;
   const borderOpacity = useRef(new Animated.Value(1)).current;
+
+  // Audio player setup - you'll need to add a sound file to your assets
+  const player = useAudioPlayer(
+    require("../../assets/music/button-click.mp3") // Update this path to your sound file
+  );
 
   const getButtonStyle = (): ViewStyle => {
     const baseStyle = buttons[variant];
@@ -75,6 +83,12 @@ export default function MainButton({
   };
 
   const handlePressIn = () => {
+    // Play sound if enabled
+    if (playSoundOnPress && player) {
+      player.seekTo(0); // Reset to beginning
+      player.play(); // Play the sound
+    }
+
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 0.98,
