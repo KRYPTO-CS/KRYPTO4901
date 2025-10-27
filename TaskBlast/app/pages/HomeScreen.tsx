@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   Image,
   ImageBackground,
-  Animated,
   AppState,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
@@ -19,32 +18,8 @@ export default function HomeScreen() {
   const router = useRouter();
   const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
   const [rocks, setRocks] = useState<number>(0);
-  const backgrounds = [
-    require("../../assets/images/homeBackground.png"),
-    require("../../assets/images/homeBackground2.png"),
-    require("../../assets/images/homeBackground3.png"),
-  ];
-  const [bgIndex, setBgIndex] = useState(0);
-  const [nextBgIndex, setNextBgIndex] = useState(1);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const [showNext, setShowNext] = useState(false);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setShowNext(true);
-      fadeAnim.setValue(0);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 700,
-        useNativeDriver: true,
-      }).start(() => {
-        setBgIndex(nextBgIndex);
-        setNextBgIndex((nextBgIndex + 1) % backgrounds.length);
-        setShowNext(false);
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [nextBgIndex, fadeAnim]);
+ 
+  const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
 
   const loadScore = useCallback(async () => {
     try {
@@ -83,30 +58,12 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1">
-      {/* Current background always visible */}
+      {/* Animated stars background */}
       <ImageBackground
-        source={backgrounds[bgIndex]}
+        source={starBackground}
         className="absolute inset-0 w-full h-full"
         resizeMode="cover"
       />
-      {/* Next background fades in over current */}
-      {showNext && (
-        <Animated.View
-          style={{
-            position: "absolute",
-            width: "100%",
-            height: "100%",
-            opacity: fadeAnim,
-          }}
-          pointerEvents="none"
-        >
-          <ImageBackground
-            source={backgrounds[nextBgIndex]}
-            className="flex-1"
-            resizeMode="cover"
-          />
-        </Animated.View>
-      )}
       {/* All UI elements above the background */}
       <View className="flex-1 p-5">
         {/* Top Left Section - Profile & Settings */}
