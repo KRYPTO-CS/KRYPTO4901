@@ -20,40 +20,13 @@ export default function PomodoroScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const totalTime = 1 * 60; // Total duration in seconds
 
-  // Background animation state
-  const backgrounds = [
-    require("../../assets/images/homeBackground.png"),
-    require("../../assets/images/homeBackground2.png"),
-    require("../../assets/images/homeBackground3.png"),
-  ];
-  const [bgIndex, setBgIndex] = useState(0);
-  const [nextBgIndex, setNextBgIndex] = useState(1);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const [showNext, setShowNext] = useState(false);
+  const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
 
   // Music state
   const player = useAudioPlayer(require("../../assets/music/pomodoroLoop.mp3"));
 
   // Player floating animation
   const floatAnim = useRef(new Animated.Value(0)).current;
-
-  // Background animation effect
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setShowNext(true);
-      fadeAnim.setValue(0);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 700,
-        useNativeDriver: true,
-      }).start(() => {
-        setBgIndex(nextBgIndex);
-        setNextBgIndex((nextBgIndex + 1) % backgrounds.length);
-        setShowNext(false);
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [nextBgIndex, fadeAnim]);
 
   // Player floating animation effect
   useEffect(() => {
@@ -161,31 +134,12 @@ export default function PomodoroScreen() {
 
   return (
     <View className="flex-1">
-      {/* Current background */}
+      {/* Animated stars background */}
       <ImageBackground
-        source={backgrounds[bgIndex]}
+        source={starBackground}
         className="absolute inset-0 w-full h-full"
         resizeMode="cover"
       />
-
-      {/* Next background fades in */}
-      {showNext && (
-        <Animated.View
-          style={{
-            position: "absolute",
-            width: "100%",
-            height: "100%",
-            opacity: fadeAnim,
-          }}
-          pointerEvents="none"
-        >
-          <ImageBackground
-            source={backgrounds[nextBgIndex]}
-            className="flex-1"
-            resizeMode="cover"
-          />
-        </Animated.View>
-      )}
 
       {/* Content */}
       <View className="flex-1 p-5 pt-20">
@@ -223,7 +177,7 @@ export default function PomodoroScreen() {
         {/* Player Image - Centered */}
         <View className="flex-1 items-center justify-center">
           <Animated.Image
-            source={require("../../assets/images/Player.png")}
+            source={require("../../assets/images/sprites/ship.png")}
             className="w-72 h-72"
             resizeMode="contain"
             style={{
