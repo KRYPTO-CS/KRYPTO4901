@@ -81,10 +81,10 @@ export default function HomeScreen() {
           {/* Fuel Badge */}
           <View className="flex-row items-center bg-gradient-to-r from-orange-500 to-yellow-400 px-5 py-2.5 rounded-full shadow-lg shadow-orange-400/40 border-2 border-yellow-300/30">
             <Image
-              source={require("../../assets/images/fuel.png")}
+              source={require("../../assets/images/sprites/fuel.png")}
               className="w-7 h-7 mr-1"
               resizeMode="contain"
-              style={{ transform: [{ scale: 2 }], marginBottom: 2 }}
+              style={{ transform: [{ scale: 1.4 }], marginBottom: 2 }}
             />
             <Text className="font-orbitron-bold text-white text-md ml-2">
               20/20
@@ -94,10 +94,10 @@ export default function HomeScreen() {
           {/* Rocks */}
           <View className="flex-row items-center bg-gradient-to-r from-purple-600 to-pink-500 px-5 py-2.5 rounded-full shadow-lg shadow-purple-500/40 border-2 border-pink-300/30">
             <Image
-              source={require("../../assets/images/Rocks.png")}
+              source={require("../../assets/images/sprites/rocks.png")}
               className="w-7 h-7 mr-1"
               resizeMode="contain"
-              style={{ transform: [{ scale: 3 }] }}
+              style={{ transform: [{ scale: 1.4 }] }}
             />
             <Text className="font-orbitron-bold text-white text-md ml-2">
               {String(rocks).padStart(4, "0")}
@@ -112,7 +112,7 @@ export default function HomeScreen() {
             onPress={() => setIsTaskModalVisible(true)}
           >
             <Image
-              source={require("../../assets/images/Task.png")}
+              source={require("../../assets/images/sprites/task.png")}
               className="w-7 h-7 mt-2"
               resizeMode="contain"
               style={{ transform: [{ scale: 3.8 }] }}
@@ -123,9 +123,8 @@ export default function HomeScreen() {
         {/* Center - Planet Image */}
         <View className="flex-1 items-center justify-center">
           <Image
-            source={require("../../assets/images/planet.png")}
-            className="w-64 h-64"
-            resizeMode="contain"
+            source={require("../../assets/images/sprites/planet.png")}
+            style={{ width: 128, height: 128 }}
           />
         </View>
 
