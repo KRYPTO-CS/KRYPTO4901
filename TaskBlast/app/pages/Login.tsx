@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Image, Modal, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Image, Modal, ActivityIndicator, Alert } from "react-native";
 import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
 import VerifyCode from "./VerifyCode";
@@ -423,6 +423,12 @@ export default function Login() {
                 </View>
               </Modal> 
             )}
+
+            {error !== "" && ( 
+              Alert.alert("Error", error, [
+                { text: "OK", onPress: () => setError("") }
+              ]
+            ))}
 
       </View>
     </TouchableWithoutFeedback>
