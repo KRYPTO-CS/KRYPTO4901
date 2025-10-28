@@ -6,6 +6,8 @@ import {
   Animated,
   Image,
   AppState,
+  Dimensions,
+  Easing,
 } from "react-native";
 import { useRouter } from "expo-router";
 import MainButton from "../components/MainButton";
@@ -22,30 +24,64 @@ export default function PomodoroScreen() {
 
   const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
 
+  // Scrolling background animation
+  const windowHeight = Dimensions.get("window").height;
+  const scrollAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // duration controls scroll speed (ms). Increase for slower scroll.
+    const duration = 20000;
+    const loop = Animated.loop(
+      Animated.timing(scrollAnim, {
+        toValue: 1,
+        duration,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scrollAnim]);
+
+  // Interpolate translateY from 0 -> windowHeight
+  const translateY = scrollAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, windowHeight],
+  });
+
   // Music state
   const player = useAudioPlayer(require("../../assets/music/pomodoroLoop.mp3"));
 
   // Player floating animation
   const floatAnim = useRef(new Animated.Value(0)).current;
 
+  // Interpolated float value for smooth oscillation between -15 and 15
+  const translateFloat = floatAnim.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [-15, 0, 15],
+  });
+
   // Player floating animation effect
   useEffect(() => {
-    const floatAnimation = Animated.loop(
+    const duration = 2000; // half-cycle duration
+    const floatLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
-          toValue: -15,
-          duration: 2000,
+          toValue: 1,
+          duration: duration,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(floatAnim, {
-          toValue: 15,
-          duration: 2000,
+          toValue: 0,
+          duration: duration,
+          easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ])
     );
-    floatAnimation.start();
-    return () => floatAnimation.stop();
+    floatLoop.start();
+    return () => floatLoop.stop();
   }, [floatAnim]);
 
   // Play music on mount
@@ -133,13 +169,40 @@ export default function PomodoroScreen() {
   };
 
   return (
-    <View className="flex-1">
-      {/* Animated stars background */}
-      <ImageBackground
-        source={starBackground}
-        className="absolute inset-0 w-full h-full"
-        resizeMode="cover"
-      />
+  <View className="flex-1" style={{ backgroundColor: "#0d1b2a" }}>
+      {/* Animated stars background - two stacked images that translate down and loop */}
+      <View className="absolute inset-0 w-full h-full" style={{ overflow: "hidden" }}>
+        <Animated.View
+          style={{
+            transform: [{ translateY }],
+            width: "100%",
+            position: "absolute",
+            top: 0,
+            left: 0,
+          }}
+        >
+            <Image
+              source={starBackground}
+              style={{
+                width: "100%",
+                height: windowHeight,
+                position: "absolute",
+                top: -windowHeight,
+              }}
+              resizeMode="cover"
+            />
+            <Image
+              source={starBackground}
+              style={{
+                width: "100%",
+                height: windowHeight,
+                position: "absolute",
+                top: 0,
+              }}
+              resizeMode="cover"
+            />
+        </Animated.View>
+      </View>
 
       {/* Content */}
       <View className="flex-1 p-5 pt-20">
@@ -181,7 +244,7 @@ export default function PomodoroScreen() {
             className="w-72 h-72"
             resizeMode="contain"
             style={{
-              transform: [{ scale: 0.5 }, { translateY: floatAnim }],
+              transform: [{ scale: 0.5 }, { translateY: translateFloat }],
             }}
           />
         </View>

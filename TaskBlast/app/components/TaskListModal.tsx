@@ -144,10 +144,10 @@ export default function TaskListModal({
                   </Text>
                   <View className="flex-row items-center mt-1">
                     <Image
-                      source={require("../../assets/images/Rocks.png")}
+                      source={require("../../assets/images/sprites/rocks.png")}
                       className="w-7 h-7 mr-1"
                       resizeMode="contain"
-                      style={{ transform: [{ scale: 2.5 }] }}
+                      style={{ transform: [{ scale: 1 }] }}
                     />
                     <Text className="font-orbitron-bold text-purple-300 text-sm ml-1">
                       {task.reward}
