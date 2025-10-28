@@ -38,6 +38,7 @@ export default function Login() {
   const [verificationCode, setVerificationCode] = useState("");
   const [signUpLoading, setSignUpLoading] = useState(false); // maybe add some sort of loading bar
   const [loginLoading, setLoginLoading] = useState(false);
+  const [error, setError] = useState("");
 
   // Sign up state
   const [signUpData, setSignUpData] = useState({
@@ -79,6 +80,8 @@ export default function Login() {
       console.log("Login successful:", userCredential.user.email);
       setCurrentScreen("homeScreen");
     } catch (error: any) {
+      const errmsg = error?.code ?? error?.message ?? "Login Failed";
+      setError(errmsg);
       console.error("Login error:", error?.code ?? error?.message ?? error);
     } finally {
       setLoginLoading(false);
@@ -409,8 +412,8 @@ export default function Login() {
 
         </TouchableOpacity>
       </View>
-
-            {(loginLoading || signUpLoading) && (
+            
+            {(loginLoading || signUpLoading) && ( // Loading indicator
               <Modal visible transparent animationType="fade">
                 <View>
                   <ActivityIndicator size="large"/>
