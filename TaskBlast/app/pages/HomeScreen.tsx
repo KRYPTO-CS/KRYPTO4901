@@ -10,16 +10,24 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
+import { useAudioPlayer } from "expo-audio";
 import MainButton from "../components/MainButton";
 import TaskListModal from "../components/TaskListModal";
+import SettingsModal from "../components/SettingsModal";
 import { useRouter } from "expo-router";
 
 export default function HomeScreen() {
   const router = useRouter();
   const [isTaskModalVisible, setIsTaskModalVisible] = useState(false);
+  const [isSettingsModalVisible, setIsSettingsModalVisible] = useState(false);
   const [rocks, setRocks] = useState<number>(0);
- 
+
   const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
+
+  // Background music player
+  const musicPlayer = useAudioPlayer(
+    require("../../assets/music/homeScreenMusic.mp3")
+  );
 
   const loadScore = useCallback(async () => {
     try {
@@ -32,12 +40,33 @@ export default function HomeScreen() {
     }
   }, []);
 
+  // Play background music on mount and loop it
+  useEffect(() => {
+    if (musicPlayer) {
+      musicPlayer.loop = true;
+      musicPlayer.play();
+    }
+
+    return () => {
+      if (musicPlayer) {
+        musicPlayer.pause();
+      }
+    };
+  }, [musicPlayer]);
+
   useEffect(() => {
     loadScore();
 
     const handleAppState = (nextState: string) => {
       if (nextState === "active") {
         loadScore();
+        if (musicPlayer) {
+          musicPlayer.play();
+        }
+      } else {
+        if (musicPlayer) {
+          musicPlayer.pause();
+        }
       }
     };
 
@@ -48,12 +77,22 @@ export default function HomeScreen() {
     return () => {
       if (sub && typeof sub.remove === "function") sub.remove();
     };
-  }, [loadScore]);
+  }, [loadScore, musicPlayer]);
 
   useFocusEffect(
     useCallback(() => {
       loadScore();
-    }, [loadScore])
+      // Resume music when screen comes into focus
+      if (musicPlayer) {
+        musicPlayer.play();
+      }
+      return () => {
+        // Pause music when leaving the screen
+        if (musicPlayer) {
+          musicPlayer.pause();
+        }
+      };
+    }, [loadScore, musicPlayer])
   );
 
   return (
@@ -68,10 +107,16 @@ export default function HomeScreen() {
       <View className="flex-1 p-5">
         {/* Top Left Section - Profile & Settings */}
         <View className="absolute top-20 left-5 z-10">
-          <TouchableOpacity className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full items-center justify-center mb-3 shadow-lg shadow-purple-500/50">
+          <TouchableOpacity
+            className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full items-center justify-center mb-3 shadow-lg shadow-purple-500/50"
+            onPress={() => router.push("/pages/ProfileScreen")}
+          >
             <Ionicons name="person" size={26} color="white" />
           </TouchableOpacity>
-          <TouchableOpacity className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-blue-500 rounded-full items-center justify-center shadow-lg shadow-blue-500/50">
+          <TouchableOpacity
+            className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-blue-500 rounded-full items-center justify-center shadow-lg shadow-blue-500/50"
+            onPress={() => setIsSettingsModalVisible(true)}
+          >
             <Ionicons name="settings" size={26} color="white" />
           </TouchableOpacity>
         </View>
@@ -140,6 +185,12 @@ export default function HomeScreen() {
         <TaskListModal
           visible={isTaskModalVisible}
           onClose={() => setIsTaskModalVisible(false)}
+        />
+
+        {/* Settings Modal */}
+        <SettingsModal
+          visible={isSettingsModalVisible}
+          onClose={() => setIsSettingsModalVisible(false)}
         />
       </View>
     </View>
