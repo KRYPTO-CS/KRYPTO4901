@@ -240,7 +240,7 @@ export default function PomodoroScreen() {
         {/* Player Image - Centered */}
         <View className="flex-1 items-center justify-center">
           <Animated.Image
-            source={require("../../assets/images/sprites/ship.png")}
+            source={require("../../assets/images/sprites/shipAnimated.gif")}
             className="w-72 h-72"
             resizeMode="contain"
             style={{

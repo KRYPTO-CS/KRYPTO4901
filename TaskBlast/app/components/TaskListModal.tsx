@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,29 @@ import {
   ScrollView,
   TextInput,
   Image,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { getAuth } from "firebase/auth";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  onSnapshot,
+  serverTimestamp,
+  Timestamp 
+} from "firebase/firestore";
 
 interface Task {
   id: string;
   name: string;
   reward: number;
   completed: boolean;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
 interface TaskListModalProps {
@@ -26,41 +41,103 @@ export default function TaskListModal({
   visible,
   onClose,
 }: TaskListModalProps) {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: "1", name: "Clean your room", reward: 50, completed: false },
-    { id: "2", name: "Do homework", reward: 75, completed: false },
-    { id: "3", name: "Help with dishes", reward: 30, completed: false },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const auth = getAuth();
+  const db = getFirestore();
+  
+  useEffect(() => {
+    if (!auth.currentUser) {
+      setError("Please log in to view tasks");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      const userTasksRef = collection(db, "users", auth.currentUser.uid, "tasks");
+      const unsubscribe = onSnapshot(userTasksRef, (snapshot: any) => {
+        const taskList: Task[] = [];
+        snapshot.forEach((doc: any) => {
+          const data = doc.data();
+          taskList.push({
+            id: doc.id,
+            name: data.name,
+            reward: data.reward,
+            completed: data.completed,
+            createdAt: data.createdAt || Timestamp.now(),
+            updatedAt: data.updatedAt || Timestamp.now()
+          });
+        });
+        // Sort tasks by creation date, newest first
+        taskList.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+        setTasks(taskList);
+        setLoading(false);
+        setError(null);
+      }, (error: Error) => {
+        console.error("Error fetching tasks:", error);
+        setError("Failed to load tasks");
+        setLoading(false);
+      });      return () => unsubscribe();
+    } catch (error) {
+      console.error("Error setting up task listener:", error);
+      setError("Failed to initialize task system");
+      setLoading(false);
+    }
+  }, [auth.currentUser]);
 
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [newTaskName, setNewTaskName] = useState("");
   const [newTaskReward, setNewTaskReward] = useState("");
 
-  const handleCompleteTask = (taskId: string) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
+  const handleCompleteTask = async (taskId: string) => {
+    if (!auth.currentUser) return;
+    try {
+      const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", taskId);
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        await updateDoc(taskRef, {
+          completed: !task.completed,
+          updatedAt: serverTimestamp()
+        });
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      Alert.alert("Error", "Failed to update task");
+    }
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    setTasks(tasks.filter((task) => task.id !== taskId));
+  const handleDeleteTask = async (taskId: string) => {
+    if (!auth.currentUser) return;
+    try {
+      const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", taskId);
+      await deleteDoc(taskRef);
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      Alert.alert("Error", "Failed to delete task");
+    }
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
+    if (!auth.currentUser) return;
     if (newTaskName.trim() && newTaskReward.trim()) {
-      const newTask: Task = {
-        id: Date.now().toString(),
-        name: newTaskName,
-        reward: parseInt(newTaskReward) || 0,
-        completed: false,
-      };
-      setTasks([...tasks, newTask]);
-      setNewTaskName("");
-      setNewTaskReward("");
-      setIsAddingTask(false);
+      try {
+        const userTasksRef = collection(db, "users", auth.currentUser.uid, "tasks");
+        await addDoc(userTasksRef, {
+          name: newTaskName,
+          reward: parseInt(newTaskReward) || 0,
+          completed: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+        setNewTaskName("");
+        setNewTaskReward("");
+        setIsAddingTask(false);
+      } catch (error) {
+        console.error("Error adding task:", error);
+        Alert.alert("Error", "Failed to add task");
+      }
     }
   };
 
@@ -74,23 +151,24 @@ export default function TaskListModal({
     }
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
+    if (!auth.currentUser) return;
     if (editingTaskId && newTaskName.trim() && newTaskReward.trim()) {
-      setTasks(
-        tasks.map((task) =>
-          task.id === editingTaskId
-            ? {
-                ...task,
-                name: newTaskName,
-                reward: parseInt(newTaskReward) || 0,
-              }
-            : task
-        )
-      );
-      setNewTaskName("");
-      setNewTaskReward("");
-      setIsAddingTask(false);
-      setEditingTaskId(null);
+      try {
+        const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", editingTaskId);
+        await updateDoc(taskRef, {
+          name: newTaskName,
+          reward: parseInt(newTaskReward) || 0,
+          updatedAt: serverTimestamp(),
+        });
+        setNewTaskName("");
+        setNewTaskReward("");
+        setIsAddingTask(false);
+        setEditingTaskId(null);
+      } catch (error) {
+        console.error("Error updating task:", error);
+        Alert.alert("Error", "Failed to update task");
+      }
     }
   };
 
@@ -123,9 +201,27 @@ export default function TaskListModal({
             </TouchableOpacity>
           </View>
 
-          {/* Task List */}
-          <ScrollView className="max-h-96 mb-4">
-            {tasks.map((task) => (
+          {/* Error Message */}
+          {error && (
+            <View className="bg-red-500/20 border-2 border-red-400/30 p-4 rounded-2xl mb-4">
+              <Text className="font-madimi text-white text-base">{error}</Text>
+            </View>
+          )}
+
+          {/* Loading State */}
+          {loading ? (
+            <View className="items-center justify-center p-4">
+              <Text className="font-madimi text-white text-base">Loading tasks...</Text>
+            </View>
+          ) : (
+            /* Task List */
+            <ScrollView className="max-h-96 mb-4">
+              {tasks.length === 0 ? (
+                <View className="items-center justify-center p-4">
+                  <Text className="font-madimi text-white text-base">No tasks yet. Add your first task!</Text>
+                </View>
+              ) : (
+                tasks.map((task) => (
               <View
                 key={task.id}
                 className={`flex-row items-center justify-between p-4 mb-3 rounded-2xl border-2 ${
@@ -187,8 +283,10 @@ export default function TaskListModal({
                   </TouchableOpacity>
                 </View>
               </View>
-            ))}
-          </ScrollView>
+                ))
+              )}
+            </ScrollView>
+          )}
 
           {/* Add/Edit Task Form */}
           {isAddingTask && (
