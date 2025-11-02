@@ -6,6 +6,8 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ImageBackground,
+  NativeSyntheticEvent,
+  TextInputKeyPressEventData,
 } from "react-native";
 import MainButton from "../components/MainButton";
 
@@ -22,6 +24,11 @@ export default function SignUpBirthdate({
   const [day, setDay] = useState("");
   const [year, setYear] = useState("");
   const [error, setError] = useState("");
+
+  // Refs for birthdate inputs to implement auto-advance
+  const monthRef = useRef<TextInput | null>(null);
+  const dayRef = useRef<TextInput | null>(null);
+  const yearRef = useRef<TextInput | null>(null);
 
   const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
 
@@ -112,10 +119,21 @@ export default function SignUpBirthdate({
                   placeholder="MM"
                   placeholderTextColor="rgba(255,255,255,0.5)"
                   value={month}
-                  onChangeText={(text) => setMonth(text.replace(/[^0-9]/g, ""))}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, "");
+                    setMonth(cleaned);
+                    // Auto-advance to day when month is filled (2 digits)
+                    if (cleaned.length >= 2) {
+                      dayRef.current?.focus();
+                    }
+                  }}
                   keyboardType="number-pad"
                   maxLength={2}
-                  onSubmitEditing={() => Keyboard.dismiss()}
+                  ref={(ref) => { monthRef.current = ref; }}
+                  onSubmitEditing={() => dayRef.current?.focus()}
+                  onKeyPress={(e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+                    // If user deletes from empty, nothing to do here for month
+                  }}
                 />
               </View>
 
@@ -128,10 +146,24 @@ export default function SignUpBirthdate({
                   placeholder="DD"
                   placeholderTextColor="rgba(255,255,255,0.5)"
                   value={day}
-                  onChangeText={(text) => setDay(text.replace(/[^0-9]/g, ""))}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, "");
+                    setDay(cleaned);
+                    // Auto-advance to year when day is filled (2 digits)
+                    if (cleaned.length >= 2) {
+                      yearRef.current?.focus();
+                    }
+                  }}
                   keyboardType="number-pad"
                   maxLength={2}
-                  onSubmitEditing={() => Keyboard.dismiss()}
+                  ref={(ref) => { dayRef.current = ref; }}
+                  onSubmitEditing={() => yearRef.current?.focus()}
+                  onKeyPress={(e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+                    // If user presses backspace on empty day, move focus to month
+                    if (e.nativeEvent.key === "Backspace" && day.length === 0) {
+                      monthRef.current?.focus();
+                    }
+                  }}
                 />
               </View>
 
@@ -144,10 +176,24 @@ export default function SignUpBirthdate({
                   placeholder="YYYY"
                   placeholderTextColor="rgba(255,255,255,0.5)"
                   value={year}
-                  onChangeText={(text) => setYear(text.replace(/[^0-9]/g, ""))}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, "");
+                    setYear(cleaned);
+                    // Optionally blur when year is complete
+                    if (cleaned.length >= 4) {
+                      yearRef.current?.blur();
+                    }
+                  }}
                   keyboardType="number-pad"
                   maxLength={4}
+                  ref={(ref) => { yearRef.current = ref; }}
                   onSubmitEditing={() => Keyboard.dismiss()}
+                  onKeyPress={(e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+                    // If user presses backspace on empty year, move focus to day
+                    if (e.nativeEvent.key === "Backspace" && year.length === 0) {
+                      dayRef.current?.focus();
+                    }
+                  }}
                 />
               </View>
             </View>

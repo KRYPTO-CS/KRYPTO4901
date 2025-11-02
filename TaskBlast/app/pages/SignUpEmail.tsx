@@ -90,7 +90,7 @@ export default function SignUpEmail({ onSubmit, onBack }: SignUpEmailProps) {
             ) : null}
 
             <MainButton
-              title="Send Code"
+              title="Send Link"
               variant="primary"
               size="medium"
               customStyle={{
