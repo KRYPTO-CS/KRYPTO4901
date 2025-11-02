@@ -6,8 +6,11 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ImageBackground,
+  TouchableOpacity,
 } from "react-native";
 import MainButton from "../components/MainButton";
+import { auth } from "../../server/firebase";
+import { sendEmailVerification } from "firebase/auth";
 
 interface SignUpVerifyEmailProps {
   email: string;
@@ -22,22 +25,38 @@ export default function SignUpVerifyEmail({
 }: SignUpVerifyEmailProps) {
   const [code, setCode] = useState(["", "", "", "", ""]);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+  const [emailSent, setEmailSent] = useState(false);
+  const [error, setError] = useState("");
 
   const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
 
-  const handleSubmit = () => {
-    const fullCode = code.join("");
-    if (fullCode.length === 5) {
-      console.log("Email verification code submitted:", fullCode);
-      onSubmit(fullCode);
-    } else {
-      console.log("Please enter a valid 5-digit code");
+  // Send verification email on mount
+  useEffect(() => {
+    sendVerificationEmail();
+  }, []);
+
+  const sendVerificationEmail = async () => {
+    try {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        setEmailSent(true);
+        setError("");
+      }
+    } catch (error: any) {
+      console.error("Error sending verification email:", error);
+      setError("Failed to send verification email");
     }
   };
 
-  const handleResend = () => {
+  const handleSubmit = () => {
+    // For email link verification, no code is needed - just proceed
+    console.log("Email verification acknowledged");
+    onSubmit("");
+  };
+
+  const handleResend = async () => {
     console.log("Resending verification code to:", email);
-    // Add resend logic here
+    await sendVerificationEmail();
   };
 
   const handleCodeChange = (text: string, index: number) => {
@@ -93,8 +112,21 @@ export default function SignUpVerifyEmail({
             </Text>
 
             <Text className="font-madimi text-sm text-white/90 mb-8 text-left">
-              Enter the 5-digit code sent to {email}
+              We've sent a verification email to {email}. Please click the link
+              in the email to verify your account.
             </Text>
+
+            {error ? (
+              <Text className="font-madimi text-sm text-red-300 mb-4 text-left drop-shadow-md">
+                {error}
+              </Text>
+            ) : null}
+
+            {emailSent ? (
+              <Text className="font-madimi text-sm text-green-300 mb-4 text-left drop-shadow-md">
+                Verification email sent! Check your inbox.
+              </Text>
+            ) : null}
 
             <View className="flex-row justify-between mb-8" style={{ gap: 10 }}>
               {[0, 1, 2, 3, 4].map((index) => (
@@ -116,15 +148,15 @@ export default function SignUpVerifyEmail({
               ))}
             </View>
 
-            <Text className="font-madimi text-xs text-white/80 text-left mb-4">
-              Didn't receive the code?{" "}
-              <Text
-                className="font-semibold text-yellow-300"
-                onPress={handleResend}
-              >
-                Resend
+            <TouchableOpacity
+              onPress={handleResend}
+              style={{ marginBottom: 16 }}
+            >
+              <Text className="font-madimi text-xs text-white/80 text-left">
+                Didn't receive the email?{" "}
+                <Text className="font-semibold text-yellow-300">Resend</Text>
               </Text>
-            </Text>
+            </TouchableOpacity>
 
             <MainButton
               title="Verify"

@@ -86,7 +86,11 @@ export default function PomodoroScreen() {
 
   // Play music on mount
   useEffect(() => {
-    player.play();
+    try {
+      player.play();
+    } catch (error) {
+      console.warn("Failed to play music:", error);
+    }
     return () => {
       // Cleanup is handled by expo-audio automatically
       // Don't manually pause/seek in cleanup to avoid stale reference issues
@@ -108,7 +112,11 @@ export default function PomodoroScreen() {
             } catch (e) {
               console.warn("Audio player error on timer finish:", e);
             }
-            router.push("/pages/GamePage");
+            try {
+              router.push("/pages/GamePage");
+            } catch (e) {
+              console.warn("Navigation error:", e);
+            }
             return 0;
           }
           return prev - 1;
@@ -129,12 +137,15 @@ export default function PomodoroScreen() {
       }
     };
 
-    const sub = AppState.addEventListener
-      ? AppState.addEventListener("change", handleAppState)
-      : undefined;
+    let sub: any;
+    if (AppState && AppState.addEventListener) {
+      sub = AppState.addEventListener("change", handleAppState);
+    }
 
     return () => {
-      if (sub && typeof sub.remove === "function") sub.remove();
+      if (sub && typeof sub.remove === "function") {
+        sub.remove();
+      }
     };
   }, []);
 
@@ -169,10 +180,14 @@ export default function PomodoroScreen() {
   };
 
   return (
-  <View className="flex-1" style={{ backgroundColor: "#0d1b2a" }}>
+    <View className="flex-1" style={{ backgroundColor: "#0d1b2a" }}>
       {/* Animated stars background - two stacked images that translate down and loop */}
-      <View className="absolute inset-0 w-full h-full" style={{ overflow: "hidden" }}>
+      <View
+        className="absolute inset-0 w-full h-full"
+        style={{ overflow: "hidden" }}
+      >
         <Animated.View
+          testID="star-background"
           style={{
             transform: [{ translateY }],
             width: "100%",
@@ -181,26 +196,26 @@ export default function PomodoroScreen() {
             left: 0,
           }}
         >
-            <Image
-              source={starBackground}
-              style={{
-                width: "100%",
-                height: windowHeight,
-                position: "absolute",
-                top: -windowHeight,
-              }}
-              resizeMode="cover"
-            />
-            <Image
-              source={starBackground}
-              style={{
-                width: "100%",
-                height: windowHeight,
-                position: "absolute",
-                top: 0,
-              }}
-              resizeMode="cover"
-            />
+          <Image
+            source={starBackground}
+            style={{
+              width: "100%",
+              height: windowHeight,
+              position: "absolute",
+              top: -windowHeight,
+            }}
+            resizeMode="cover"
+          />
+          <Image
+            source={starBackground}
+            style={{
+              width: "100%",
+              height: windowHeight,
+              position: "absolute",
+              top: 0,
+            }}
+            resizeMode="cover"
+          />
         </Animated.View>
       </View>
 
@@ -209,6 +224,7 @@ export default function PomodoroScreen() {
         {/* Progress Bar - Top Center */}
         <View className="items-center mt-8">
           <View
+            testID="progress-bar-container"
             className="w-11/12 h-8 rounded-full border-2 overflow-hidden"
             style={{
               backgroundColor: "rgba(31, 41, 55, 0.7)",
@@ -216,6 +232,7 @@ export default function PomodoroScreen() {
             }}
           >
             <View
+              testID="progress-bar-fill"
               className="h-full rounded-full"
               style={{
                 width: `${progressPercentage}%`,
@@ -228,7 +245,10 @@ export default function PomodoroScreen() {
         {/* Time Left Display */}
         <View className="items-center mt-6">
           <View className="bg-gradient-to-br from-purple-600/80 to-pink-500/80 px-8 py-4 rounded-3xl shadow-lg shadow-purple-500/50 border-2 border-pink-300/30">
-            <Text className="font-orbitron-bold text-white text-4xl">
+            <Text
+              testID="timer-display"
+              className="font-orbitron-bold text-white text-4xl"
+            >
               {formatTime(timeLeft)}
             </Text>
           </View>
@@ -240,6 +260,7 @@ export default function PomodoroScreen() {
         {/* Player Image - Centered */}
         <View className="flex-1 items-center justify-center">
           <Animated.Image
+            testID="spaceship-image"
             source={require("../../assets/images/sprites/shipAnimated.gif")}
             className="w-72 h-72"
             resizeMode="contain"
@@ -254,6 +275,7 @@ export default function PomodoroScreen() {
           <MainButton
             title={isPaused ? "Land" : "Pause"}
             onPress={handlePauseLand}
+            testID="pause-button"
           />
         </View>
       </View>

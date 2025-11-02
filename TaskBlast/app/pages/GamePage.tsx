@@ -1,6 +1,12 @@
 import React, { useState, useRef, useCallback } from "react";
-import { ActivityIndicator, StyleSheet, View, Text, Pressable } from "react-native";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+  Text,
+  Pressable,
+} from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -27,10 +33,13 @@ export default function GamePage() {
         // Persist the score so HomeScreen can read it later. Temporary.
         (async () => {
           try {
-            const s = Number(payload.score) || 0;
-            await AsyncStorage.setItem('game_score', String(s));
+            let s = Number(payload.score) || 0;
+            if (s < 0) { // Handle negative scores
+              s = 0;
+            }
+            await AsyncStorage.setItem("game_score", String(s));
           } catch (err) {
-            console.warn('Failed to persist game score', err);
+            console.warn("Failed to persist game score", err);
           }
         })();
       } else if (payload.type === "pingResponse") {
@@ -66,9 +75,17 @@ export default function GamePage() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+    <SafeAreaView
+      style={styles.container}
+      edges={["top", "bottom"]}
+      testID="safe-area-view"
+    >
+      <View style={styles.header} testID="game-header">
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backButton}
+          testID="back-button"
+        >
           <Text style={styles.backText}>{"< Back"}</Text>
         </Pressable>
         <Pressable onPress={sendMessageToGodot} style={styles.rightButton}>
@@ -77,7 +94,11 @@ export default function GamePage() {
       </View>
       <View style={styles.container}>
         {loading && (
-          <View style={styles.loader} pointerEvents="none">
+          <View
+            style={styles.loader}
+            pointerEvents="none"
+            testID="loading-indicator"
+          >
             <ActivityIndicator size="large" />
           </View>
         )}
