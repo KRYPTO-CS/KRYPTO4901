@@ -116,7 +116,7 @@ export default function ResetPassword({
             ) : null}
 
             <MainButton
-              title="Submit"
+              title="Reset Password"
               variant="primary"
               size="medium"
               customStyle={{

@@ -43,13 +43,21 @@ export default function HomeScreen() {
   // Play background music on mount and loop it
   useEffect(() => {
     if (musicPlayer) {
-      musicPlayer.loop = true;
-      musicPlayer.play();
+      try {
+        musicPlayer.loop = true;
+        musicPlayer.play();
+      } catch (error) {
+        console.warn("Failed to play music on mount:", error);
+      }
     }
 
     return () => {
       if (musicPlayer) {
-        musicPlayer.pause();
+        try {
+          musicPlayer.pause();
+        } catch (error) {
+          console.warn("Failed to pause music on unmount:", error);
+        }
       }
     };
   }, [musicPlayer]);
@@ -61,21 +69,32 @@ export default function HomeScreen() {
       if (nextState === "active") {
         loadScore();
         if (musicPlayer) {
-          musicPlayer.play();
+          try {
+            musicPlayer.play();
+          } catch (error) {
+            console.warn("Failed to play music on app active:", error);
+          }
         }
       } else {
         if (musicPlayer) {
-          musicPlayer.pause();
+          try {
+            musicPlayer.pause();
+          } catch (error) {
+            console.warn("Failed to pause music on app inactive:", error);
+          }
         }
       }
     };
 
-    const sub = AppState.addEventListener
-      ? AppState.addEventListener("change", handleAppState)
-      : undefined;
+    let sub: any;
+    if (AppState && AppState.addEventListener) {
+      sub = AppState.addEventListener("change", handleAppState);
+    }
 
     return () => {
-      if (sub && typeof sub.remove === "function") sub.remove();
+      if (sub && typeof sub.remove === "function") {
+        sub.remove();
+      }
     };
   }, [loadScore, musicPlayer]);
 
@@ -84,12 +103,20 @@ export default function HomeScreen() {
       loadScore();
       // Resume music when screen comes into focus
       if (musicPlayer) {
-        musicPlayer.play();
+        try {
+          musicPlayer.play();
+        } catch (error) {
+          console.warn("Failed to play music:", error);
+        }
       }
       return () => {
         // Pause music when leaving the screen
         if (musicPlayer) {
-          musicPlayer.pause();
+          try {
+            musicPlayer.pause();
+          } catch (error) {
+            console.warn("Failed to pause music:", error);
+          }
         }
       };
     }, [loadScore, musicPlayer])
@@ -108,12 +135,14 @@ export default function HomeScreen() {
         {/* Top Left Section - Profile & Settings */}
         <View className="absolute top-20 left-5 z-10">
           <TouchableOpacity
+            testID="profile-button"
             className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full items-center justify-center mb-3 shadow-lg shadow-purple-500/50"
             onPress={() => router.push("/pages/ProfileScreen")}
           >
             <Ionicons name="person" size={26} color="white" />
           </TouchableOpacity>
           <TouchableOpacity
+            testID="settings-button"
             className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-blue-500 rounded-full items-center justify-center shadow-lg shadow-blue-500/50"
             onPress={() => setIsSettingsModalVisible(true)}
           >
@@ -126,6 +155,7 @@ export default function HomeScreen() {
           {/* Fuel Badge */}
           <View className="flex-row items-center bg-gradient-to-r from-orange-500 to-yellow-400 px-5 py-2.5 rounded-full shadow-lg shadow-orange-400/40 border-2 border-yellow-300/30">
             <Image
+              testID="fuel-icon"
               source={require("../../assets/images/sprites/fuel.png")}
               className="w-7 h-7 mr-1"
               resizeMode="contain"
@@ -153,6 +183,7 @@ export default function HomeScreen() {
         {/* Task List Button - Aligned Right */}
         <View className="items-end mt-4 pr-0">
           <TouchableOpacity
+            testID="task-button"
             className="flex-row  items-center px-6 py-3.5 rounded-2xl shadow-lg"
             onPress={() => setIsTaskModalVisible(true)}
           >
@@ -168,6 +199,7 @@ export default function HomeScreen() {
         {/* Center - Planet Image */}
         <View className="flex-1 items-center justify-center">
           <Image
+            testID="planet-image"
             source={require("../../assets/images/sprites/planet.png")}
             style={{ width: 128, height: 128 }}
           />

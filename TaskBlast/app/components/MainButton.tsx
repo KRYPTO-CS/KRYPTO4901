@@ -29,6 +29,7 @@ interface MainButtonProps extends TouchableOpacityProps {
   customStyle?: ViewStyle;
   textStyle?: TextStyle;
   playSoundOnPress?: boolean; // Option to enable/disable sound
+  testID?: string;
 }
 
 export default function MainButton({
@@ -136,6 +137,7 @@ export default function MainButton({
 
   return (
     <Pressable
+      testID={props.testID}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       android_ripple={{ color: "transparent" }} // Disable Android ripple

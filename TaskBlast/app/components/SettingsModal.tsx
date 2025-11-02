@@ -6,17 +6,23 @@ import {
   TouchableOpacity,
   ScrollView,
   Switch,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { auth } from "../../server/firebase";
+import { signOut } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface SettingsModalProps {
   visible: boolean;
   onClose: () => void;
+  onLogout?: () => void;
 }
 
 export default function SettingsModal({
   visible,
   onClose,
+  onLogout,
 }: SettingsModalProps) {
   // Settings state
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -24,12 +30,42 @@ export default function SettingsModal({
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            // Clear AsyncStorage
+            await AsyncStorage.clear();
+            // Sign out from Firebase
+            await signOut(auth);
+            // Call onLogout callback if provided
+            if (onLogout) {
+              onLogout();
+            }
+            onClose();
+          } catch (error) {
+            console.error("Logout error:", error);
+            Alert.alert("Error", "Failed to logout. Please try again.");
+          }
+        },
+      },
+    ]);
+  };
+
   return (
     <Modal
       animationType="fade"
       transparent={true}
       visible={visible}
       onRequestClose={onClose}
+      testID="settings-modal"
     >
       <View className="flex-1 justify-center items-center bg-black/70">
         <View
@@ -57,6 +93,7 @@ export default function SettingsModal({
               Settings
             </Text>
             <TouchableOpacity
+              testID="close-settings-modal"
               onPress={onClose}
               className="w-10 h-10 rounded-full items-center justify-center"
               style={{
@@ -262,7 +299,7 @@ export default function SettingsModal({
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="flex-row items-center p-4 rounded-xl"
+              className="flex-row items-center p-4 rounded-xl mb-3"
               style={{
                 backgroundColor: "rgba(236, 72, 153, 0.2)",
                 borderWidth: 1,
@@ -283,6 +320,28 @@ export default function SettingsModal({
                 About
               </Text>
               <Ionicons name="chevron-forward" size={20} color="#ec4899" />
+            </TouchableOpacity>
+
+            {/* Logout Button */}
+            <TouchableOpacity
+              testID="logout-button"
+              className="flex-row items-center justify-center p-4 rounded-xl"
+              style={{
+                backgroundColor: "rgba(239, 68, 68, 0.2)",
+                borderWidth: 1,
+                borderColor: "rgba(239, 68, 68, 0.3)",
+              }}
+              onPress={handleLogout}
+            >
+              <Ionicons
+                name="log-out-outline"
+                size={24}
+                color="#ef4444"
+                style={{ marginRight: 12 }}
+              />
+              <Text className="font-orbitron-bold text-red-400 text-base">
+                Logout
+              </Text>
             </TouchableOpacity>
           </ScrollView>
 
