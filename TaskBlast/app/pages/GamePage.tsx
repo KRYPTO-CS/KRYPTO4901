@@ -33,7 +33,10 @@ export default function GamePage() {
         // Persist the score so HomeScreen can read it later. Temporary.
         (async () => {
           try {
-            const s = Number(payload.score) || 0;
+            let s = Number(payload.score) || 0;
+            if (s < 0) { // Handle negative scores
+              s = 0;
+            }
             await AsyncStorage.setItem("game_score", String(s));
           } catch (err) {
             console.warn("Failed to persist game score", err);
