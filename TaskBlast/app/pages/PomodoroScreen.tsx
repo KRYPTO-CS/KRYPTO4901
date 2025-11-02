@@ -20,6 +20,7 @@ export default function PomodoroScreen() {
   const [timeLeft, setTimeLeft] = useState(1 * 60); // 1 minute in seconds
   const [isRunning, setIsRunning] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const [finished, setFinished] = useState(false);
   const totalTime = 1 * 60; // Total duration in seconds
 
   const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
@@ -112,11 +113,7 @@ export default function PomodoroScreen() {
             } catch (e) {
               console.warn("Audio player error on timer finish:", e);
             }
-            try {
-              router.push("/pages/GamePage");
-            } catch (e) {
-              console.warn("Navigation error:", e);
-            }
+            setFinished(true);
             return 0;
           }
           return prev - 1;
@@ -128,6 +125,19 @@ export default function PomodoroScreen() {
       if (interval) clearInterval(interval);
     };
   }, [isRunning, isPaused, timeLeft, router]);
+
+  useEffect(() => {
+    if (!finished) return;
+    const id = setTimeout(() => {
+      try {
+        router.push("/pages/GamePage");
+      } catch (e) {
+        console.warn("Navigation error:", e);
+      }
+    }, 0);
+
+    return () => clearTimeout(id);
+  }, [finished, router]);
 
   // Handle app state changes (pause when app goes to background)
   useEffect(() => {

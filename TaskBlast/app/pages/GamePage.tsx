@@ -76,7 +76,7 @@ export default function GamePage() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
-      <View testID="safe-area-view" edges={["top", "bottom"]} style={{ flex: 1 }}>
+      <View testID="safe-area-view" style={{ flex: 1 }}>
         <View style={styles.header} testID="game-header">
         <Pressable
           onPress={() => router.back()}
@@ -102,6 +102,7 @@ export default function GamePage() {
         <WebView
           ref={webviewRef}
           source={{ uri: GAME_URL }}
+          testID="webview"
           style={styles.webview}
           onLoadEnd={() => setLoading(false)}
           startInLoadingState
