@@ -8,6 +8,7 @@ import {
   Keyboard,
   Image,
   ImageBackground,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
@@ -19,7 +20,7 @@ import SignUpAccountType from "./SignUpAccountType";
 import SignUpManagerPin from "./SignUpManagerPin";
 import SignUpName from "./SignUpName";
 import SignUpEmail from "./SignUpEmail";
-import SignUpVerifyEmail from "./SignUpVerifyEmail";
+// Skipping verification code entry screen; SignUpVerifyEmail removed from flow
 import SignUpCreatePassword from "./SignUpCreatePassword";
 import HomeScreen from "./HomeScreen";
 import { auth, db, firestore } from "../../server/firebase";
@@ -28,6 +29,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
+  sendEmailVerification
 } from "firebase/auth";
 
 type Screen =
@@ -83,13 +85,23 @@ export default function Login() {
       return;
     }
 
-    // Handle normal login logic here
+    // handle login logic here
     signInWithEmailAndPassword(auth, username.trim(), p)
-      .then((userCredential) => {
+      .then(async (userCredential) => {
         // Signed in
         const user = userCredential.user;
         console.log("Login successful:", user.email);
-        setCurrentScreen("homeScreen");
+        // no home screen unless email verified
+        if (user.emailVerified) {
+          setCurrentScreen("homeScreen");
+        } else {
+          Alert.alert(
+            "Verify Your Email",
+            "A verification email was sent. Please verify your email before signing in.",
+            [{ text: "OK" }]
+          );
+          setCurrentScreen("login");
+        }
       })
       .catch((error) => {
         // display error to user here
@@ -160,12 +172,8 @@ export default function Login() {
   };
 
   const handleSignUpEmailSubmit = (email: string) => {
+    // Save email and skip code entry screen: go straight to password creation
     setSignUpData({ ...signUpData, email });
-    setCurrentScreen("signUpVerifyEmail");
-  };
-
-  const handleSignUpVerifyEmailSubmit = (code: string) => {
-    setSignUpData({ ...signUpData, verificationCode: code });
     setCurrentScreen("signUpCreatePassword");
   };
 
@@ -196,6 +204,18 @@ export default function Login() {
       await updateProfile(user, {
         displayName: `${payload.firstName} ${payload.lastName}`,
       });
+
+      // send email verification via Firebase
+      try {
+        await sendEmailVerification(user);
+        console.log("Verification email sent to:", user.email);
+        Alert.alert(
+          "Verification Email Sent",
+          "A verification email has been sent to your address. Please check your email and verify your account."
+        );
+      } catch (verifErr) {
+        console.error("Failed to send verification email:", verifErr);
+      }
 
       console.log(
         "auth.currentUser uid:",
@@ -236,8 +256,12 @@ export default function Login() {
         ...payload,
         password: "***",
       });
-      // Navigate to home screen
-      setCurrentScreen("homeScreen");
+      // only allow home screen if email verified (no code needed anymore)
+      if (user.emailVerified) {
+        setCurrentScreen("homeScreen");
+      } else {
+        setCurrentScreen("login");
+      }
     } catch (error: any) {
       console.error("Sign up error:", error?.code ?? error?.message ?? error);
       return;
@@ -332,21 +356,13 @@ export default function Login() {
     );
   }
 
-  if (currentScreen === "signUpVerifyEmail") {
-    return (
-      <SignUpVerifyEmail
-        email={signUpData.email}
-        onSubmit={handleSignUpVerifyEmailSubmit}
-        onBack={() => setCurrentScreen("signUpEmail")}
-      />
-    );
-  }
 
   if (currentScreen === "signUpCreatePassword") {
     return (
       <SignUpCreatePassword
         onSubmit={handleSignUpPasswordSubmit}
-        onBack={() => setCurrentScreen("signUpVerifyEmail")}
+        // Since we skip the verification code screen, back should return to the email entry
+        onBack={() => setCurrentScreen("signUpEmail")}
       />
     );
   }
@@ -397,7 +413,7 @@ export default function Login() {
                 />
                 <TextInput
                   className="font-madimi flex-1 text-base text-white"
-                  placeholder="Username"
+                  placeholder="Email or Username"
                   placeholderTextColor="rgba(255,255,255,0.6)"
                   value={username}
                   onChangeText={setUsername}
