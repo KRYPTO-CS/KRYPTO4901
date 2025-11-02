@@ -33,13 +33,22 @@ export default function GamePage() {
             console.warn('Failed to persist game score', err);
           }
         })();
+      } else if (payload.type === "pingResponse") {
+        console.log("Pong received from Godot:", payload);
       } else {
-        console.log("Other message from game:", payload);
+        console.log("Other message:", payload);
       }
     } catch (err) {
       console.warn("Invalid message from WebView:", event.nativeEvent.data);
     }
   }, []);
+
+  const sendMessageToGodot = () => {
+  console.log("Sending a ping to Godot.");
+  webviewRef.current?.postMessage(
+    JSON.stringify({ type: "incrementComm" })
+  );
+};
 
   if (!WebView) {
     return (
@@ -61,6 +70,9 @@ export default function GamePage() {
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backText}>{"< Back"}</Text>
+        </Pressable>
+        <Pressable onPress={sendMessageToGodot} style={styles.rightButton}>
+          <Text style={styles.rightText}>Send</Text>
         </Pressable>
       </View>
       <View style={styles.container}>
@@ -120,7 +132,9 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 56,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 12,
     backgroundColor: "#000",
     zIndex: 20,
@@ -130,6 +144,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backText: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  rightButton: {
+    width: 80,
+    justifyContent: "center",
+    alignItems: "flex-end",
+  },
+  rightText: {
     color: "#fff",
     fontSize: 16,
   },
