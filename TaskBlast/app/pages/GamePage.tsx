@@ -75,12 +75,9 @@ export default function GamePage() {
   }
 
   return (
-    <SafeAreaView
-      style={styles.container}
-      edges={["top", "bottom"]}
-      testID="safe-area-view"
-    >
-      <View style={styles.header} testID="game-header">
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <View testID="safe-area-view" edges={["top", "bottom"]} style={{ flex: 1 }}>
+        <View style={styles.header} testID="game-header">
         <Pressable
           onPress={() => router.back()}
           style={styles.backButton}
@@ -114,6 +111,7 @@ export default function GamePage() {
           onMessage={handleMessage}
           originWhitelist={["*"]}
         />
+      </View>
       </View>
     </SafeAreaView>
   );

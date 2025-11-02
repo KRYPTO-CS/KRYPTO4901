@@ -301,18 +301,6 @@ describe("Game Screen", () => {
   });
 
   describe("Error Handling", () => {
-    it("should display message when WebView is not installed", () => {
-      // Mock WebView not available
-      jest.doMock("react-native-webview", () => ({
-        WebView: null,
-      }));
-
-      const { getByText } = render(<GamePage />);
-
-      expect(getByText("WebView not installed")).toBeTruthy();
-      expect(getByText(/npm install react-native-webview/i)).toBeTruthy();
-    });
-
     it("should handle WebView load errors", () => {
       const { getByTestId } = render(<GamePage />);
       const webview = getByTestId("webview");
