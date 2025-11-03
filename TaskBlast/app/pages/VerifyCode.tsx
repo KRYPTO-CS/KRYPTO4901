@@ -15,6 +15,8 @@ interface VerifyCodeProps {
   onBack: () => void;
 }
 
+// CURRENTLY UNUSED - STORED FOR POTENTIAL FUTURE USE
+
 export default function VerifyCode({
   email,
   onSubmit,

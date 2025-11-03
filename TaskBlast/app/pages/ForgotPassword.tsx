@@ -7,6 +7,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
@@ -50,10 +51,16 @@ export default function ForgotPassword({
 
     try {
       await sendPasswordResetEmail(auth, trimmedEmail);
-      setSuccessMessage(
-        "Check your email for a reset link. Please check your email and click the link to reset your password."
-      );
+      const successText =
+        "Check your email for a reset link. Please check your email and click the link to reset your password.";
+      setSuccessMessage(successText);
       setEmailSent(true);
+
+      // Show a system alert so the user knows to check their email
+      Alert.alert("Reset Email Sent", successText, [{ text: "OK" }]);
+
+      // Notify parent (Login) only after a successful send so it can navigate back to login
+      onSubmit(trimmedEmail);
     } catch (error: any) {
       if (error.code === "auth/user-not-found") {
         setErrorMessage("No account found with this email address.");
@@ -69,8 +76,7 @@ export default function ForgotPassword({
       }
     }
 
-    // Always call onSubmit with the trimmed email after validation
-    onSubmit(trimmedEmail);
+    // note: onSubmit is only called on success above
   };
 
   const handleResend = async () => {

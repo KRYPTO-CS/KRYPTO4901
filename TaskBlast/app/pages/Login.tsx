@@ -13,7 +13,6 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
-import VerifyCode from "./VerifyCode";
 import ResetPassword from "./ResetPassword";
 import SignUpBirthdate from "./SignUpBirthdate";
 import SignUpAccountType from "./SignUpAccountType";
@@ -35,7 +34,6 @@ import {
 type Screen =
   | "login"
   | "forgotPassword"
-  | "verifyCode"
   | "resetPassword"
   | "signUpBirthdate"
   | "signUpAccountType"
@@ -67,6 +65,7 @@ export default function Login() {
     managerialPin: null as string | null,
   });
   const [signUpLoading, setSignUpLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
   const handleLogin = () => {
     // Normalize inputs to make bypass resilient to whitespace/casing
@@ -76,12 +75,13 @@ export default function Login() {
     // Bypass login for testing (case-insensitive username, trim whitespace)
     if (u === "admin" && p === "taskblaster") {
       console.log("Bypass login successful");
+      setLoginError("");
       setCurrentScreen("homeScreen");
       return;
     }
 
     if (!u || !p) {
-      console.error("Login error: username and password are required");
+      setLoginError("Please enter your username and password");
       return;
     }
 
@@ -105,8 +105,20 @@ export default function Login() {
       })
       .catch((error) => {
         // display error to user here
-        const errorCode = error.code;
-        const errorMessage = error.message;
+        const errorCode = error?.code;
+        const errorMessage = error?.message;
+        if (errorCode === "auth/user-not-found") {
+          setLoginError("No account found with this email address.");
+        } else if (
+          errorCode === "auth/wrong-password" ||
+          errorCode === "auth/invalid-credential"
+        ) {
+          setLoginError("Invalid email or password");
+        } else if (errorMessage && errorMessage.toLowerCase().includes("network")) {
+          setLoginError("Network error. Please check your connection.");
+        } else {
+          setLoginError("Login failed. Please try again.");
+        }
         console.error("Login error:", errorCode, errorMessage);
       });
   };
@@ -121,14 +133,12 @@ export default function Login() {
   };
 
   const handleEmailSubmit = (email: string) => {
+    // After ForgotPassword successfully sends a reset email, return to login
     setResetEmail(email);
-    setCurrentScreen("verifyCode");
+    setCurrentScreen("login");
   };
 
-  const handleCodeSubmit = (code: string) => {
-    setVerificationCode(code);
-    setCurrentScreen("resetPassword");
-  };
+  // removed VerifyCode flow: password reset uses an emailed link and returns to login
 
   const handlePasswordReset = (newPassword: string) => {
     console.log("Password reset successful for:", resetEmail);
@@ -291,15 +301,7 @@ export default function Login() {
     );
   }
 
-  if (currentScreen === "verifyCode") {
-    return (
-      <VerifyCode
-        email={resetEmail}
-        onSubmit={handleCodeSubmit}
-        onBack={() => setCurrentScreen("forgotPassword")}
-      />
-    );
-  }
+  // VerifyCode flow removed: password reset now uses emailed link and returns to login
 
   if (currentScreen === "resetPassword") {
     return (
@@ -416,7 +418,10 @@ export default function Login() {
                   placeholder="Email or Username"
                   placeholderTextColor="rgba(255,255,255,0.6)"
                   value={username}
-                  onChangeText={setUsername}
+                  onChangeText={(t) => {
+                    setUsername(t);
+                    setLoginError("");
+                  }}
                   autoCapitalize="none"
                   onSubmitEditing={() => Keyboard.dismiss()}
                 />
@@ -436,13 +441,22 @@ export default function Login() {
                   placeholder="Password"
                   placeholderTextColor="rgba(255,255,255,0.6)"
                   value={password}
-                  onChangeText={setPassword}
+                    onChangeText={(t) => {
+                      setPassword(t);
+                      setLoginError("");
+                    }}
                   secureTextEntry
                   autoCapitalize="none"
                   onSubmitEditing={() => Keyboard.dismiss()}
                 />
               </View>
             </View>
+
+              {loginError ? (
+                <Text className="font-madimi text-sm text-red-300 mb-4 text-center drop-shadow-md">
+                  {loginError}
+                </Text>
+              ) : null}
           </View>
 
           <MainButton
