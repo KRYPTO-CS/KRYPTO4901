@@ -1,5 +1,14 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableWithoutFeedback, Keyboard } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  ImageBackground,
+  NativeSyntheticEvent,
+  TextInputKeyPressEventData,
+} from "react-native";
 import MainButton from "../components/MainButton";
 
 interface SignUpBirthdateProps {
@@ -15,6 +24,13 @@ export default function SignUpBirthdate({
   const [day, setDay] = useState("");
   const [year, setYear] = useState("");
   const [error, setError] = useState("");
+
+  // Refs for birthdate inputs to implement auto-advance
+  const monthRef = useRef<TextInput | null>(null);
+  const dayRef = useRef<TextInput | null>(null);
+  const yearRef = useRef<TextInput | null>(null);
+
+  const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
 
   const handleSubmit = () => {
     setError("");
@@ -73,91 +89,145 @@ export default function SignUpBirthdate({
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <View className="flex-1 bg-background items-center justify-center p-5">
-      {/* Birthdate Container */}
-      <View className="w-full max-w-md bg-transparent rounded-xl p-8">
-        <Text className="text-4xl font-madimi font-semibold text-text-primary mb-4 text-left">
-          What's Your Birthdate?
-        </Text>
+      <View className="flex-1">
+        {/* Animated stars background */}
+        <ImageBackground
+          source={starBackground}
+          className="absolute inset-0 w-full h-full"
+          resizeMode="cover"
+        />
 
-        <Text className="font-madimi text-sm text-text-secondary mb-8 text-left">
-          You must be at least 13 years old to register
-        </Text>
-
-        <View className="flex-row justify-between mb-4" style={{ gap: 10 }}>
-          <View className="flex-1">
-            <Text className="font-madimi text-xs text-text-secondary mb-2">
-              Month
+        {/* Content overlay */}
+        <View className="flex-1 items-center justify-center p-5">
+          {/* Birthdate Container */}
+          <View className="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-3xl p-8 border-2 border-white/30 shadow-2xl">
+            <Text className="text-4xl font-madimi font-semibold text-white mb-4 text-left drop-shadow-md">
+              What's Your Birthdate?
             </Text>
-            <TextInput
-              className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 text-base text-text-primary"
-              placeholder="MM"
-              placeholderTextColor="#999"
-              value={month}
-              onChangeText={(text) => setMonth(text.replace(/[^0-9]/g, ""))}
-              keyboardType="number-pad"
-              maxLength={2}
-              onSubmitEditing={() => Keyboard.dismiss()}
+
+            <Text className="font-madimi text-sm text-white/90 mb-8 text-left">
+              You must be at least 13 years old to register
+            </Text>
+
+            <View className="flex-row justify-between mb-4" style={{ gap: 10 }}>
+              <View className="flex-1">
+                <Text className="font-madimi text-xs text-white/80 mb-2">
+                  Month
+                </Text>
+                <TextInput
+                  className="font-madimi w-full h-12 bg-white/20 border-2 border-white/40 rounded-2xl px-4 text-base text-white shadow-lg"
+                  placeholder="MM"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  value={month}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, "");
+                    setMonth(cleaned);
+                    // Auto-advance to day when month is filled (2 digits)
+                    if (cleaned.length >= 2) {
+                      dayRef.current?.focus();
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  ref={(ref) => { monthRef.current = ref; }}
+                  onSubmitEditing={() => dayRef.current?.focus()}
+                  onKeyPress={(e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+                    // If user deletes from empty, nothing to do here for month
+                  }}
+                />
+              </View>
+
+              <View className="flex-1">
+                <Text className="font-madimi text-xs text-white/80 mb-2">
+                  Day
+                </Text>
+                <TextInput
+                  className="font-madimi w-full h-12 bg-white/20 border-2 border-white/40 rounded-2xl px-4 text-base text-white shadow-lg"
+                  placeholder="DD"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  value={day}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, "");
+                    setDay(cleaned);
+                    // Auto-advance to year when day is filled (2 digits)
+                    if (cleaned.length >= 2) {
+                      yearRef.current?.focus();
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  ref={(ref) => { dayRef.current = ref; }}
+                  onSubmitEditing={() => yearRef.current?.focus()}
+                  onKeyPress={(e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+                    // If user presses backspace on empty day, move focus to month
+                    if (e.nativeEvent.key === "Backspace" && day.length === 0) {
+                      monthRef.current?.focus();
+                    }
+                  }}
+                />
+              </View>
+
+              <View className="flex-1">
+                <Text className="font-madimi text-xs text-white/80 mb-2">
+                  Year
+                </Text>
+                <TextInput
+                  className="font-madimi w-full h-12 bg-white/20 border-2 border-white/40 rounded-2xl px-4 text-base text-white shadow-lg"
+                  placeholder="YYYY"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  value={year}
+                  onChangeText={(text) => {
+                    const cleaned = text.replace(/[^0-9]/g, "");
+                    setYear(cleaned);
+                    // Optionally blur when year is complete
+                    if (cleaned.length >= 4) {
+                      yearRef.current?.blur();
+                    }
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  ref={(ref) => { yearRef.current = ref; }}
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                  onKeyPress={(e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+                    // If user presses backspace on empty year, move focus to day
+                    if (e.nativeEvent.key === "Backspace" && year.length === 0) {
+                      dayRef.current?.focus();
+                    }
+                  }}
+                />
+              </View>
+            </View>
+
+            {error ? (
+              <Text className="font-madimi text-sm text-red-300 mb-4 text-left drop-shadow-md">
+                {error}
+              </Text>
+            ) : null}
+
+            <MainButton
+              title="Continue"
+              variant="primary"
+              size="medium"
+              customStyle={{
+                width: "60%",
+                alignSelf: "flex-start",
+                marginTop: 10,
+              }}
+              onPress={handleSubmit}
             />
           </View>
 
-          <View className="flex-1">
-            <Text className="font-madimi text-xs text-text-secondary mb-2">
-              Day
+          {/* Back Link */}
+          <View className="mt-8 items-center">
+            <Text
+              className="font-madimi text-sm text-white drop-shadow-md cursor-pointer"
+              onPress={onBack}
+            >
+              Back to{" "}
+              <Text className="font-semibold text-yellow-300">Login</Text>
             </Text>
-            <TextInput
-              className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 text-base text-text-primary"
-              placeholder="DD"
-              placeholderTextColor="#999"
-              value={day}
-              onChangeText={(text) => setDay(text.replace(/[^0-9]/g, ""))}
-              keyboardType="number-pad"
-              maxLength={2}
-              onSubmitEditing={() => Keyboard.dismiss()}
-            />
-          </View>
-
-          <View className="flex-1">
-            <Text className="font-madimi text-xs text-text-secondary mb-2">
-              Year
-            </Text>
-            <TextInput
-              className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 text-base text-text-primary"
-              placeholder="YYYY"
-              placeholderTextColor="#999"
-              value={year}
-              onChangeText={(text) => setYear(text.replace(/[^0-9]/g, ""))}
-              keyboardType="number-pad"
-              maxLength={4}
-              onSubmitEditing={() => Keyboard.dismiss()}
-            />
           </View>
         </View>
-
-        {error ? (
-          <Text className="font-madimi text-sm text-red-500 mb-4 text-left">
-            {error}
-          </Text>
-        ) : null}
-
-        <MainButton
-          title="Continue"
-          variant="primary"
-          size="medium"
-          customStyle={{ width: "60%", alignSelf: "flex-start", marginTop: 10 }}
-          onPress={handleSubmit}
-        />
-      </View>
-
-      {/* Back Link */}
-      <View className="mt-8 items-center">
-        <Text
-          className="font-madimi text-sm text-text-secondary cursor-pointer"
-          onPress={onBack}
-        >
-          Back to <Text className="font-semibold text-primary">Login</Text>
-        </Text>
-      </View>
       </View>
     </TouchableWithoutFeedback>
   );

@@ -1,25 +1,39 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, Keyboard, Image, Modal, ActivityIndicator, Alert } from "react-native";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Image,
+  ImageBackground,
+  Alert,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
 import ForgotPassword from "./ForgotPassword";
-import VerifyCode from "./VerifyCode";
 import ResetPassword from "./ResetPassword";
 import SignUpBirthdate from "./SignUpBirthdate";
 import SignUpAccountType from "./SignUpAccountType";
 import SignUpManagerPin from "./SignUpManagerPin";
 import SignUpName from "./SignUpName";
 import SignUpEmail from "./SignUpEmail";
-import SignUpVerifyEmail from "./SignUpVerifyEmail";
+// Skipping verification code entry screen; SignUpVerifyEmail removed from flow
 import SignUpCreatePassword from "./SignUpCreatePassword";
 import HomeScreen from "./HomeScreen";
-import { auth, db, firestore} from "../../server/firebase";
-import { doc, setDoc, serverTimestamp, collection, query, where, getDocs } from "firebase/firestore";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth, db, firestore } from "../../server/firebase";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendEmailVerification
+} from "firebase/auth";
 
 type Screen =
   | "login"
   | "forgotPassword"
-  | "verifyCode"
   | "resetPassword"
   | "signUpBirthdate"
   | "signUpAccountType"
@@ -40,6 +54,8 @@ export default function Login() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
+
   // Sign up state
   const [signUpData, setSignUpData] = useState({
     birthdate: "",
@@ -51,41 +67,63 @@ export default function Login() {
     accountType: "",
     managerialPin: null as string | null,
   });
+  const [signUpLoading, setSignUpLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
 
-  const handleLogin = async () => {
-    setLoginLoading(true);
-    try {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      let loginEmail = username;
+  const handleLogin = () => {
+    // Normalize inputs to make bypass resilient to whitespace/casing
+    const u = username.trim().toLowerCase();
+    const p = password.trim();
 
-      if (!emailRegex.test(username)) {
-        const usersCollection = collection(firestore, "users");
-        const unameQuery = query(usersCollection, where("username", "==", username));
-        const querySnapshot = await getDocs(unameQuery);
-
-        if (querySnapshot.empty) {
-          console.error("Invalid username or password");
-          return;
-        }
-
-        const userInfo = querySnapshot.docs[0].data() as any;
-        if (!userInfo.email) {
-          console.error("User record has no email");
-          return;
-        }
-        loginEmail = userInfo.email;
-      }
-
-      const userCredential = await signInWithEmailAndPassword(auth, loginEmail, password);
-      console.log("Login successful:", userCredential.user.email);
+    // Bypass login for testing (case-insensitive username, trim whitespace)
+    if (u === "admin" && p === "taskblaster") {
+      console.log("Bypass login successful");
+      setLoginError("");
       setCurrentScreen("homeScreen");
-    } catch (error: any) {
-      const errmsg = error?.code ?? error?.message ?? "Login Failed";
-      setError(errmsg);
-      console.error("Login error:", error?.code ?? error?.message ?? error);
-    } finally {
-      setLoginLoading(false);
+      return;
     }
+
+    if (!u || !p) {
+      setLoginError("Please enter your username and password");
+      return;
+    }
+
+    // handle login logic here
+    signInWithEmailAndPassword(auth, username.trim(), p)
+      .then(async (userCredential) => {
+        // Signed in
+        const user = userCredential.user;
+        console.log("Login successful:", user.email);
+        // no home screen unless email verified
+        if (user.emailVerified) {
+          setCurrentScreen("homeScreen");
+        } else {
+          Alert.alert(
+            "Verify Your Email",
+            "A verification email was sent. Please verify your email before signing in.",
+            [{ text: "OK" }]
+          );
+          setCurrentScreen("login");
+        }
+      })
+      .catch((error) => {
+        // display error to user here
+        const errorCode = error?.code;
+        const errorMessage = error?.message;
+        if (errorCode === "auth/user-not-found") {
+          setLoginError("No account found with this email address.");
+        } else if (
+          errorCode === "auth/wrong-password" ||
+          errorCode === "auth/invalid-credential"
+        ) {
+          setLoginError("Invalid email or password");
+        } else if (errorMessage && errorMessage.toLowerCase().includes("network")) {
+          setLoginError("Network error. Please check your connection.");
+        } else {
+          setLoginError("Login failed. Please try again.");
+        }
+        console.error("Login error:", errorCode, errorMessage);
+      });
   };
 
   const handleForgotPassword = () => {
@@ -98,14 +136,12 @@ export default function Login() {
   };
 
   const handleEmailSubmit = (email: string) => {
+    // After ForgotPassword successfully sends a reset email, return to login
     setResetEmail(email);
-    setCurrentScreen("verifyCode");
+    setCurrentScreen("login");
   };
 
-  const handleCodeSubmit = (code: string) => {
-    setVerificationCode(code);
-    setCurrentScreen("resetPassword");
-  };
+  // removed VerifyCode flow: password reset uses an emailed link and returns to login
 
   const handlePasswordReset = (newPassword: string) => {
     console.log("Password reset successful for:", resetEmail);
@@ -149,12 +185,8 @@ export default function Login() {
   };
 
   const handleSignUpEmailSubmit = (email: string) => {
+    // Save email and skip code entry screen: go straight to password creation
     setSignUpData({ ...signUpData, email });
-    setCurrentScreen("signUpVerifyEmail");
-  };
-
-  const handleSignUpVerifyEmailSubmit = (code: string) => {
-    setSignUpData({ ...signUpData, verificationCode: code });
     setCurrentScreen("signUpCreatePassword");
   };
 
@@ -174,7 +206,11 @@ export default function Login() {
     setSignUpLoading(true);
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, payload.email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        payload.email,
+        password
+      );
       const user = userCredential.user;
       console.log("Sign up successful:", user.email);
 
@@ -182,7 +218,24 @@ export default function Login() {
         displayName: `${payload.firstName} ${payload.lastName}`,
       });
 
-      console.log("auth.currentUser uid:", auth.currentUser?.uid, "created user uid:", user.uid);
+      // send email verification via Firebase
+      try {
+        await sendEmailVerification(user);
+        console.log("Verification email sent to:", user.email);
+        Alert.alert(
+          "Verification Email Sent",
+          "A verification email has been sent to your address. Please check your email and verify your account."
+        );
+      } catch (verifErr) {
+        console.error("Failed to send verification email:", verifErr);
+      }
+
+      console.log(
+        "auth.currentUser uid:",
+        auth.currentUser?.uid,
+        "created user uid:",
+        user.uid
+      );
 
       const userDocRef = doc(firestore, "users", user.uid);
       try {
@@ -201,7 +254,10 @@ export default function Login() {
           await user.delete();
           console.log("Deleted auth user due to Firestore write failure");
         } catch (deleteErr) {
-          console.error("Failed to delete auth user after write failure:", deleteErr);
+          console.error(
+            "Failed to delete auth user after write failure:",
+            deleteErr
+          );
         }
         throw writeErr;
       }
@@ -209,9 +265,16 @@ export default function Login() {
       // Clear sensitive data from state
       setSignUpData({ ...payload, password: "" });
 
-      console.log("Sign up complete with data:", { ...payload, password: "***" });
-      // Navigate to home screen
-      setCurrentScreen("homeScreen");
+      console.log("Sign up complete with data:", {
+        ...payload,
+        password: "***",
+      });
+      // only allow home screen if email verified (no code needed anymore)
+      if (user.emailVerified) {
+        setCurrentScreen("homeScreen");
+      } else {
+        setCurrentScreen("login");
+      }
     } catch (error: any) {
       console.error("Sign up error:", error?.code ?? error?.message ?? error);
       return;
@@ -241,15 +304,7 @@ export default function Login() {
     );
   }
 
-  if (currentScreen === "verifyCode") {
-    return (
-      <VerifyCode
-        email={resetEmail}
-        onSubmit={handleCodeSubmit}
-        onBack={() => setCurrentScreen("forgotPassword")}
-      />
-    );
-  }
+  // VerifyCode flow removed: password reset now uses emailed link and returns to login
 
   if (currentScreen === "resetPassword") {
     return (
@@ -306,21 +361,13 @@ export default function Login() {
     );
   }
 
-  if (currentScreen === "signUpVerifyEmail") {
-    return (
-      <SignUpVerifyEmail
-        email={signUpData.email}
-        onSubmit={handleSignUpVerifyEmailSubmit}
-        onBack={() => setCurrentScreen("signUpEmail")}
-      />
-    );
-  }
 
   if (currentScreen === "signUpCreatePassword") {
     return (
       <SignUpCreatePassword
         onSubmit={handleSignUpPasswordSubmit}
-        onBack={() => setCurrentScreen("signUpVerifyEmail")}
+        // Since we skip the verification code screen, back should return to the email entry
+        onBack={() => setCurrentScreen("signUpEmail")}
       />
     );
   }
@@ -331,78 +378,145 @@ export default function Login() {
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <View className="flex-1 bg-background items-center justify-center p-5">
-      {/* Logo Section */}
-      <View className="mb-12 items-center">
-        <Text className="text-6xl font-madimi text-primary">TaskBlast</Text>
-      </View>
-
-      {/* Login Container */}
-      <View className="w-full max-w-md bg-transparent rounded-xl p-8 border-2 border-gray-300 border-dashed">
-        <Text className="text-4xl font-madimi font-semibold text-text-primary mb-8 text-center">
-          Login
-        </Text>
-
-        <TextInput
-          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-4 text-base text-text-primary"
-          placeholder="Username"
-          placeholderTextColor="#999"
-          value={username}
-          onChangeText={setUsername}
-          autoCapitalize="none"
-          onSubmitEditing={() => Keyboard.dismiss()}
+      <View className="flex-1">
+        {/* Animated stars background */}
+        <ImageBackground
+          source={starBackground}
+          className="absolute inset-0 w-full h-full"
+          resizeMode="cover"
         />
 
-        <TextInput
-          className="font-madimi w-full h-12 bg-gray-50 border border-gray-300 rounded-lg px-4 mb-8 text-base text-text-primary margin-bottom-xxl"
-          placeholder="Password"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          onSubmitEditing={() => Keyboard.dismiss()}
-        />
-      </View>
+        {/* Content overlay */}
+        <View className="flex-1 items-center justify-center p-5">
+          {/* Logo Section */}
+          <View className="mb-12 items-center">
+            <Text
+              className="text-6xl font-madimi text-white drop-shadow-lg"
+              style={{
+                textShadowColor: "rgba(0,0,0,0.3)",
+                textShadowOffset: { width: 2, height: 2 },
+                textShadowRadius: 4,
+              }}
+            >
+              TaskBlast
+            </Text>
+          </View>
 
-      <MainButton
-        title="Submit"
-        variant="primary"
-        size="medium"
-        customStyle={{ width: "60%", alignSelf: "center", marginTop: -15 }}
-        onPress={handleLogin}
-      />
+          {/* Login Container */}
+          <View className="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-3xl p-8 border-2 border-white/30 shadow-2xl">
+            <Text className="text-4xl font-madimi font-semibold text-white mb-8 text-center drop-shadow-md">
+              Login
+            </Text>
 
-      {/* Bottom Links */}
-      <View className="mt-8 items-center">
-        <TouchableOpacity onPress={handleSignUp} className="my-2">
-          <Text className="font-madimi text-sm text-text-secondary">
-            Don't have an account?{" "}
-            <Text className="font-semibold text-primary">Sign Up</Text>
-          </Text>
-        </TouchableOpacity>
+            <View className="mb-4">
+              <View className="flex-row items-center bg-white/20 border-2 border-white/40 rounded-2xl px-4 h-14 shadow-lg">
+                <Ionicons
+                  name="person-outline"
+                  size={22}
+                  color="white"
+                  style={{ marginRight: 10 }}
+                />
+                <TextInput
+                  className="font-madimi flex-1 text-base text-white"
+                  placeholder="Email or Username"
+                  placeholderTextColor="rgba(255,255,255,0.6)"
+                  value={username}
+                  onChangeText={(t) => {
+                    setUsername(t);
+                    setLoginError("");
+                  }}
+                  autoCapitalize="none"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                />
+              </View>
+            </View>
 
-        <TouchableOpacity style={{ 
-          
-          flexDirection: 'row', 
-          alignItems: 'center',
-          borderWidth: 1,
-          borderColor: "#ddd",
-          backgroundColor : "#fff",
-          padding: 10,
-          borderRadius: 5,
-          }}>
-          
-          <Image
-            source={{
-              uri: "https://developers.google.com/identity/images/g-logo.png",
-            }}
-            style={{ 
-              width: 20, 
-              height: 20, 
-              marginRight: 10,
-            }}
+            <View className="mb-8">
+              <View className="flex-row items-center bg-white/20 border-2 border-white/40 rounded-2xl px-4 h-14 shadow-lg">
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={22}
+                  color="white"
+                  style={{ marginRight: 10 }}
+                />
+                <TextInput
+                  className="font-madimi flex-1 text-base text-white"
+                  placeholder="Password"
+                  placeholderTextColor="rgba(255,255,255,0.6)"
+                  value={password}
+                    onChangeText={(t) => {
+                      setPassword(t);
+                      setLoginError("");
+                    }}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                />
+              </View>
+            </View>
+
+              {loginError ? (
+                <Text className="font-madimi text-sm text-red-300 mb-4 text-center drop-shadow-md">
+                  {loginError}
+                </Text>
+              ) : null}
+          </View>
+
+          <MainButton
+            title="Submit"
+            variant="primary"
+            size="medium"
+            customStyle={{ width: "60%", alignSelf: "center", marginTop: -15 }}
+            onPress={handleLogin}
           />
+
+          {/* Bottom Links */}
+          <View className="mt-8 items-center">
+            <TouchableOpacity onPress={handleSignUp} className="my-2">
+              <Text className="font-madimi text-sm text-white drop-shadow-md">
+                Don't have an account?{" "}
+                <Text className="font-semibold text-yellow-300">Sign Up</Text>
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                borderWidth: 2,
+                borderColor: "rgba(255,255,255,0.4)",
+                backgroundColor: "rgba(255,255,255,0.15)",
+                padding: 12,
+                borderRadius: 16,
+                marginVertical: 8,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+              }}
+            >
+              <Image
+                source={{
+                  uri: "https://developers.google.com/identity/images/g-logo.png",
+                }}
+                style={{
+                  width: 20,
+                  height: 20,
+                  marginRight: 10,
+                }}
+              />
+              <Text className="font-madimi text-white">
+                Sign in with Google
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleForgotPassword} className="my-2">
+              <Text className="font-madimi text-sm text-white/80 drop-shadow-md">
+                Forgot Your Password?
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
           <Text>Sign in with Google</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={handleForgotPassword} className="my-2">

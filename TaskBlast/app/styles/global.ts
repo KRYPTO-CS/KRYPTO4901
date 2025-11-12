@@ -251,16 +251,19 @@ export const buttonText = {
   success: {
     color: colors.text.inverse,
     fontSize: fontSize.md,
+    fontFamily: fontFamily.orbitron.medium,
     fontWeight: fontWeight.semibold,
   },
   error: {
     color: colors.text.inverse,
     fontSize: fontSize.md,
+    fontFamily: fontFamily.orbitron.medium,
     fontWeight: fontWeight.semibold,
   },
   warning: {
     color: colors.text.inverse,
     fontSize: fontSize.md,
+    fontFamily: fontFamily.orbitron.medium,
     fontWeight: fontWeight.semibold,
   },
   small: {
