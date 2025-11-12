@@ -224,7 +224,7 @@ export default function SignUpBirthdate({
               onPress={onBack}
             >
               Back to{" "}
-              <Text className="font-semibold text-yellow-300">Login</Text>
+              <Text className="font-semibold text-yellow-300">Previous Step</Text>
             </Text>
           </View>
         </View>
