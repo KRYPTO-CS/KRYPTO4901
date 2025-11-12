@@ -50,6 +50,9 @@ export default function Login() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("login");
   const [resetEmail, setResetEmail] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
+  const [signUpLoading, setSignUpLoading] = useState(false); // maybe add some sort of loading bar
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
 
@@ -514,6 +517,33 @@ export default function Login() {
             </TouchableOpacity>
           </View>
         </View>
+          <Text>Sign in with Google</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleForgotPassword} className="my-2">
+          <Text className="font-madimi text-sm text-text-secondary">
+            Forgot Your Password?
+          </Text>
+
+        </TouchableOpacity>
+      </View>
+            
+            {(loginLoading || signUpLoading) && ( // Loading indicator
+              <Modal visible transparent animationType="fade">
+                <View>
+                  <ActivityIndicator size="large"/>
+                  <Text>
+                    {loginLoading ? "Logging in..." : "Signing up..."}
+                  </Text>
+                </View>
+              </Modal> 
+            )}
+
+            {error !== "" && ( 
+              Alert.alert("Error", error, [
+                { text: "OK", onPress: () => setError("") }
+              ]
+            ))}
+
       </View>
     </TouchableWithoutFeedback>
   );
