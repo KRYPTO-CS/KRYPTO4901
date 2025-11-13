@@ -21,6 +21,7 @@ import {
   onSnapshot,
   serverTimestamp,
   Timestamp,
+  getDoc,
 } from "firebase/firestore";
 
 interface Task {
@@ -44,6 +45,11 @@ export default function TaskListModal({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [accountType, setAccountType] = useState<string>("");
+  const [managerialPin, setManagerialPin] = useState<string | null>(null);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
   const auth = getAuth();
   const db = getFirestore();
 
@@ -53,6 +59,23 @@ export default function TaskListModal({
       setLoading(false);
       return;
     }
+
+    // Fetch user data to get accountType and managerialPin
+    const fetchUserData = async () => {
+      try {
+        const userDocRef = doc(db, "users", auth.currentUser!.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setAccountType(userData.accountType || "");
+          setManagerialPin(userData.managerialPin || null);
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    fetchUserData();
 
     try {
       const userTasksRef = collection(
@@ -96,6 +119,7 @@ export default function TaskListModal({
     }
   }, [auth.currentUser]);
 
+  const [isEditMode, setIsEditMode] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [newTaskName, setNewTaskName] = useState("");
@@ -200,6 +224,37 @@ export default function TaskListModal({
     setEditingTaskId(null);
   };
 
+  const handleEditModeToggle = () => {
+    // If trying to switch to edit mode and account is managed, show PIN modal
+    if (!isEditMode && accountType === "managed") {
+      setShowPinModal(true);
+      setPinInput("");
+      setPinError("");
+    } else {
+      // Independent account or switching back to normal mode
+      setIsEditMode(!isEditMode);
+      setIsAddingTask(false);
+      setEditingTaskId(null);
+    }
+  };
+
+  const handlePinSubmit = () => {
+    if (pinInput === managerialPin) {
+      setIsEditMode(true);
+      setShowPinModal(false);
+      setPinInput("");
+      setPinError("");
+    } else {
+      setPinError("Incorrect PIN. Please try again.");
+    }
+  };
+
+  const handlePinCancel = () => {
+    setShowPinModal(false);
+    setPinInput("");
+    setPinError("");
+  };
+
   return (
     <Modal
       visible={visible}
@@ -209,9 +264,15 @@ export default function TaskListModal({
       testID="task-modal"
     >
       <View className="flex-1 bg-black/50 items-center justify-center p-5">
-        <View className="bg-[#1a1f3a] w-full max-w-md rounded-3xl p-6 border-2 border-purple-500/30 shadow-2xl">
+        <View
+          className={`w-full max-w-md rounded-3xl p-6 border-2 shadow-2xl ${
+            isEditMode
+              ? "bg-[#2a2416] border-yellow-500/50"
+              : "bg-[#1a1f3a] border-purple-500/30"
+          }`}
+        >
           {/* Header */}
-          <View className="flex-row justify-between items-center mb-6">
+          <View className="flex-row justify-between items-center mb-4">
             <Text className="font-orbitron-bold text-white text-2xl">
               Task List
             </Text>
@@ -221,6 +282,40 @@ export default function TaskListModal({
               className="w-10 h-10 items-center justify-center"
             >
               <Ionicons name="close" size={28} color="white" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Mode Toggle */}
+          <View
+            className={`flex-row mb-6 rounded-2xl p-1 border-2 ${
+              isEditMode
+                ? "bg-yellow-900/40 border-yellow-400/30"
+                : "bg-indigo-900/40 border-indigo-400/30"
+            }`}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                setIsEditMode(false);
+                setIsAddingTask(false);
+                setEditingTaskId(null);
+              }}
+              className={`flex-1 py-3 rounded-xl items-center ${
+                !isEditMode ? "bg-purple-500" : "bg-transparent"
+              }`}
+            >
+              <Text className="font-orbitron-bold text-white text-sm">
+                Normal
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleEditModeToggle}
+              className={`flex-1 py-3 rounded-xl items-center ${
+                isEditMode ? "bg-yellow-600" : "bg-transparent"
+              }`}
+            >
+              <Text className="font-orbitron-bold text-white text-sm">
+                Edit
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -254,6 +349,8 @@ export default function TaskListModal({
                     className={`flex-row items-center justify-between p-4 mb-3 rounded-2xl border-2 ${
                       task.completed
                         ? "bg-green-500/20 border-green-400/30"
+                        : isEditMode
+                        ? "bg-yellow-600/20 border-yellow-500/40"
                         : "bg-purple-500/10 border-purple-400/30"
                     }`}
                   >
@@ -272,7 +369,11 @@ export default function TaskListModal({
                           resizeMode="contain"
                           style={{ transform: [{ scale: 1 }] }}
                         />
-                        <Text className="font-orbitron-bold text-purple-300 text-sm ml-1">
+                        <Text
+                          className={`font-orbitron-bold text-sm ml-1 ${
+                            isEditMode ? "text-yellow-300" : "text-purple-300"
+                          }`}
+                        >
                           {task.reward}
                         </Text>
                       </View>
@@ -280,36 +381,85 @@ export default function TaskListModal({
 
                     {/* Action Buttons */}
                     <View className="flex-row gap-2">
-                      <TouchableOpacity
-                        onPress={() => handleCompleteTask(task.id)}
-                        className={`w-10 h-10 rounded-full items-center justify-center ${
-                          task.completed
-                            ? "bg-green-500"
-                            : "bg-gray-500/30 border-2 border-gray-400/30"
-                        }`}
-                      >
-                        <Ionicons
-                          name={
-                            task.completed ? "checkmark" : "checkmark-outline"
-                          }
-                          size={20}
-                          color="white"
-                        />
-                      </TouchableOpacity>
+                      {isEditMode ? (
+                        <View className="flex-row">
+                          <TouchableOpacity
+                            onPress={() => handleCompleteTask(task.id)}
+                            className={`w-10 h-10 rounded-full items-center justify-center mr-1 ${
+                              task.completed
+                                ? "bg-green-500"
+                                : "bg-green-600/40 border-2 border-green-500/40"
+                            }`}
+                          >
+                            <Ionicons
+                              name={
+                                task.completed
+                                  ? "checkmark"
+                                  : "checkmark-outline"
+                              }
+                              size={20}
+                              color="white"
+                            />
+                          </TouchableOpacity>
 
-                      <TouchableOpacity
-                        onPress={() => handleEditTask(task.id)}
-                        className="w-10 h-10 rounded-full bg-blue-500/30 border-2 border-blue-400/30 items-center justify-center"
-                      >
-                        <Ionicons name="pencil" size={18} color="white" />
-                      </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleEditTask(task.id)}
+                            className="w-10 h-10 rounded-full bg-orange-600/40 border-2 border-orange-500/40 items-center justify-center mr-1"
+                          >
+                            <Ionicons name="pencil" size={18} color="#fb923c" />
+                          </TouchableOpacity>
 
-                      <TouchableOpacity
-                        onPress={() => handleDeleteTask(task.id)}
-                        className="w-10 h-10 rounded-full bg-red-500/30 border-2 border-red-400/30 items-center justify-center"
-                      >
-                        <Ionicons name="trash" size={18} color="white" />
-                      </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => handleDeleteTask(task.id)}
+                            className="w-10 h-10 rounded-full bg-red-600/40 border-2 border-red-500/40 items-center justify-center"
+                          >
+                            <Ionicons name="trash" size={18} color="#f87171" />
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <View className="flex-row">
+                          <TouchableOpacity
+                            onPress={() => handleCompleteTask(task.id)}
+                            className={`w-10 h-10 rounded-full items-center justify-center mr-1 ${
+                              task.completed
+                                ? "bg-green-500"
+                                : "bg-green-500/30 border-2 border-green-400/30"
+                            }`}
+                          >
+                            <Ionicons
+                              name={
+                                task.completed
+                                  ? "checkmark"
+                                  : "checkmark-outline"
+                              }
+                              size={20}
+                              color="white"
+                            />
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={() => {
+                              /* Start task functionality to be implemented */
+                            }}
+                            className="w-10 h-10 rounded-full bg-blue-500/30 border-2 border-blue-400/30 items-center justify-center mr-1"
+                          >
+                            <Ionicons name="play" size={18} color="white" />
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={() => {
+                              /* Info functionality to be implemented */
+                            }}
+                            className="w-10 h-10 rounded-full bg-purple-500/30 border-2 border-purple-400/30 items-center justify-center"
+                          >
+                            <Ionicons
+                              name="information-circle"
+                              size={20}
+                              color="white"
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     </View>
                   </View>
                 ))
@@ -318,20 +468,20 @@ export default function TaskListModal({
           )}
 
           {/* Add/Edit Task Form */}
-          {isAddingTask && (
-            <View className="bg-indigo-900/40 p-4 rounded-2xl mb-4 border-2 border-indigo-400/30">
-              <Text className="font-orbitron-bold text-white text-lg mb-3">
+          {isEditMode && isAddingTask && (
+            <View className="bg-yellow-900/40 p-4 rounded-2xl mb-4 border-2 border-yellow-400/30">
+              <Text className="font-orbitron-bold text-yellow-200 text-lg mb-3">
                 {editingTaskId ? "Edit Task" : "New Task"}
               </Text>
               <TextInput
-                className="font-madimi w-full h-12 bg-white/10 border border-white/20 rounded-lg px-4 mb-3 text-base text-white"
+                className="font-madimi w-full h-12 bg-white/10 border border-yellow-400/30 rounded-lg px-4 mb-3 text-base text-white"
                 placeholder="Task name"
                 placeholderTextColor="#999"
                 value={newTaskName}
                 onChangeText={setNewTaskName}
               />
               <TextInput
-                className="font-madimi w-full h-12 bg-white/10 border border-white/20 rounded-lg px-4 mb-3 text-base text-white"
+                className="font-madimi w-full h-12 bg-white/10 border border-yellow-400/30 rounded-lg px-4 mb-3 text-base text-white"
                 placeholder="Reward (rocks)"
                 placeholderTextColor="#999"
                 value={newTaskReward}
@@ -360,10 +510,10 @@ export default function TaskListModal({
           )}
 
           {/* Add Task Button */}
-          {!isAddingTask && (
+          {isEditMode && !isAddingTask && (
             <TouchableOpacity
               onPress={() => setIsAddingTask(true)}
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 py-4 rounded-2xl items-center border-2 border-cyan-300/30 shadow-lg"
+              className="bg-gradient-to-r from-yellow-600 to-amber-600 py-4 rounded-2xl items-center border-2 border-yellow-400/40 shadow-lg"
             >
               <View className="flex-row items-center">
                 <Ionicons name="add-circle" size={24} color="white" />
@@ -375,6 +525,88 @@ export default function TaskListModal({
           )}
         </View>
       </View>
+
+      {/* PIN Verification Modal */}
+      <Modal
+        visible={showPinModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handlePinCancel}
+      >
+        <View className="flex-1 bg-black/70 items-center justify-center p-5">
+          <View className="bg-[#2a2416] w-full max-w-sm rounded-3xl p-6 border-2 border-yellow-500/50 shadow-2xl">
+            <View className="items-center mb-4">
+              <View className="bg-yellow-500/20 rounded-full p-3 mb-3">
+                <Ionicons name="shield-checkmark" size={40} color="#fbbf24" />
+              </View>
+              <Text className="font-orbitron-bold text-yellow-300 text-2xl text-center">
+                Manager Access
+              </Text>
+            </View>
+            <Text className="font-madimi text-yellow-100/80 text-sm mb-6 text-center">
+              Enter the 4-digit PIN to access edit mode with elevated
+              permissions.
+            </Text>
+
+            <View className="mb-4">
+              <View className="flex-row items-center bg-yellow-900/30 border-2 border-yellow-500/40 rounded-xl px-4 h-14">
+                <Ionicons
+                  name="key-outline"
+                  size={22}
+                  color="#fbbf24"
+                  style={{ marginRight: 10 }}
+                />
+                <TextInput
+                  className="font-madimi flex-1 text-base text-yellow-100 text-center text-2xl tracking-widest"
+                  placeholder="••••"
+                  placeholderTextColor="rgba(251, 191, 36, 0.3)"
+                  value={pinInput}
+                  onChangeText={(t) =>
+                    setPinInput(t.replace(/[^0-9]/g, "").slice(0, 4))
+                  }
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={4}
+                  autoFocus
+                  onSubmitEditing={handlePinSubmit}
+                />
+              </View>
+            </View>
+
+            {pinError && (
+              <View className="bg-red-500/20 border-2 border-red-400/30 p-3 rounded-xl mb-4">
+                <Text className="font-madimi text-red-200 text-sm text-center">
+                  {pinError}
+                </Text>
+              </View>
+            )}
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={handlePinCancel}
+                className="flex-1 bg-gray-500/30 py-3 rounded-xl items-center border-2 border-gray-400/30"
+              >
+                <Text className="font-orbitron-bold text-white text-base">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handlePinSubmit}
+                disabled={pinInput.length !== 4}
+                className={`flex-1 py-3 rounded-xl items-center border-2 ${
+                  pinInput.length === 4
+                    ? "bg-gradient-to-r from-yellow-600 to-amber-600 border-yellow-400/50"
+                    : "bg-gray-500/20 border-gray-400/20"
+                }`}
+              >
+                <Text className="font-orbitron-bold text-white text-base">
+                  Unlock
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
