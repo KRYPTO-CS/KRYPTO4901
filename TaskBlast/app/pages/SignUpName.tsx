@@ -25,13 +25,16 @@ export default function SignUpName({ onSubmit, onBack }: SignUpNameProps) {
   const handleSubmit = () => {
     setError("");
 
-    if (!firstName.trim() || !lastName.trim()) {
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+
+    if (!trimmedFirstName || !trimmedLastName) {
       setError("Please enter both first and last name");
       return;
     }
 
-    console.log("Name submitted:", firstName, lastName);
-    onSubmit(firstName, lastName);
+    console.log("Name submitted:", trimmedFirstName, trimmedLastName);
+    onSubmit(trimmedFirstName, trimmedLastName);
   };
 
   return (

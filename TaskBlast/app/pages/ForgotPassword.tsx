@@ -6,9 +6,13 @@ import {
   ImageBackground,
   TouchableWithoutFeedback,
   Keyboard,
+  TouchableOpacity,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import MainButton from "../components/MainButton";
+import { auth } from "../../server/firebase";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 interface ForgotPasswordProps {
   onSubmit: (email: string) => void;
@@ -20,14 +24,63 @@ export default function ForgotPassword({
   onBack,
 }: ForgotPasswordProps) {
   const [email, setEmail] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
 
   const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
 
-  const handleSubmit = () => {
-    if (email.trim()) {
-      console.log("Password reset requested for:", email);
-      onSubmit(email);
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleSubmit = async () => {
+    const trimmedEmail = email.trim();
+
+    if (!trimmedEmail) {
+      return;
     }
+
+    if (!validateEmail(trimmedEmail)) {
+      return;
+    }
+
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      await sendPasswordResetEmail(auth, trimmedEmail);
+      const successText =
+        "Check your email for a reset link. Please check your email and click the link to reset your password.";
+      setSuccessMessage(successText);
+      setEmailSent(true);
+
+      // Show a system alert so the user knows to check their email
+      Alert.alert("Reset Email Sent", successText, [{ text: "OK" }]);
+
+      // Notify parent (Login) only after a successful send so it can navigate back to login
+      onSubmit(trimmedEmail);
+    } catch (error: any) {
+      if (error.code === "auth/user-not-found") {
+        setErrorMessage("No account found with this email address.");
+      } else if (error.code === "auth/too-many-requests") {
+        setErrorMessage("Too many attempts. Please try again later.");
+      } else if (
+        error.message &&
+        error.message.toLowerCase().includes("network")
+      ) {
+        setErrorMessage("Network error. Please check your connection.");
+      } else {
+        setErrorMessage("An error occurred. Please try again.");
+      }
+    }
+
+    // note: onSubmit is only called on success above
+  };
+
+  const handleResend = async () => {
+    await handleSubmit();
   };
 
   return (
@@ -73,6 +126,18 @@ export default function ForgotPassword({
               </View>
             </View>
 
+            {successMessage ? (
+              <Text className="font-madimi text-sm text-green-300 mb-4 text-center drop-shadow-md">
+                {successMessage}
+              </Text>
+            ) : null}
+
+            {errorMessage ? (
+              <Text className="font-madimi text-sm text-red-300 mb-4 text-center drop-shadow-md">
+                {errorMessage}
+              </Text>
+            ) : null}
+
             <MainButton
               title="Submit"
               variant="primary"
@@ -84,6 +149,17 @@ export default function ForgotPassword({
               }}
               onPress={handleSubmit}
             />
+
+            {emailSent && (
+              <TouchableOpacity
+                onPress={handleResend}
+                style={{ marginTop: 16 }}
+              >
+                <Text className="font-madimi text-sm text-yellow-300 text-center drop-shadow-md">
+                  Resend Email
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Back to Login Link */}

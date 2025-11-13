@@ -11,16 +11,16 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { getAuth } from "firebase/auth";
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
   onSnapshot,
   serverTimestamp,
-  Timestamp 
+  Timestamp,
 } from "firebase/firestore";
 
 interface Task {
@@ -46,39 +46,49 @@ export default function TaskListModal({
   const [loading, setLoading] = useState(true);
   const auth = getAuth();
   const db = getFirestore();
-  
+
   useEffect(() => {
     if (!auth.currentUser) {
       setError("Please log in to view tasks");
       setLoading(false);
       return;
     }
-    
+
     try {
-      const userTasksRef = collection(db, "users", auth.currentUser.uid, "tasks");
-      const unsubscribe = onSnapshot(userTasksRef, (snapshot: any) => {
-        const taskList: Task[] = [];
-        snapshot.forEach((doc: any) => {
-          const data = doc.data();
-          taskList.push({
-            id: doc.id,
-            name: data.name,
-            reward: data.reward,
-            completed: data.completed,
-            createdAt: data.createdAt || Timestamp.now(),
-            updatedAt: data.updatedAt || Timestamp.now()
+      const userTasksRef = collection(
+        db,
+        "users",
+        auth.currentUser.uid,
+        "tasks"
+      );
+      const unsubscribe = onSnapshot(
+        userTasksRef,
+        (snapshot: any) => {
+          const taskList: Task[] = [];
+          snapshot.forEach((doc: any) => {
+            const data = doc.data();
+            taskList.push({
+              id: doc.id,
+              name: data.name,
+              reward: data.reward,
+              completed: data.completed,
+              createdAt: data.createdAt || Timestamp.now(),
+              updatedAt: data.updatedAt || Timestamp.now(),
+            });
           });
-        });
-        // Sort tasks by creation date, newest first
-        taskList.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
-        setTasks(taskList);
-        setLoading(false);
-        setError(null);
-      }, (error: Error) => {
-        console.error("Error fetching tasks:", error);
-        setError("Failed to load tasks");
-        setLoading(false);
-      });      return () => unsubscribe();
+          // Sort tasks by creation date, newest first
+          taskList.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+          setTasks(taskList);
+          setLoading(false);
+          setError(null);
+        },
+        (error: Error) => {
+          console.error("Error fetching tasks:", error);
+          setError("Failed to load tasks");
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
     } catch (error) {
       console.error("Error setting up task listener:", error);
       setError("Failed to initialize task system");
@@ -95,11 +105,11 @@ export default function TaskListModal({
     if (!auth.currentUser) return;
     try {
       const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", taskId);
-      const task = tasks.find(t => t.id === taskId);
+      const task = tasks.find((t) => t.id === taskId);
       if (task) {
         await updateDoc(taskRef, {
           completed: !task.completed,
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         });
       }
     } catch (error) {
@@ -123,13 +133,18 @@ export default function TaskListModal({
     if (!auth.currentUser) return;
     if (newTaskName.trim() && newTaskReward.trim()) {
       try {
-        const userTasksRef = collection(db, "users", auth.currentUser.uid, "tasks");
+        const userTasksRef = collection(
+          db,
+          "users",
+          auth.currentUser.uid,
+          "tasks"
+        );
         await addDoc(userTasksRef, {
           name: newTaskName,
           reward: parseInt(newTaskReward) || 0,
           completed: false,
           createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
         });
         setNewTaskName("");
         setNewTaskReward("");
@@ -155,7 +170,13 @@ export default function TaskListModal({
     if (!auth.currentUser) return;
     if (editingTaskId && newTaskName.trim() && newTaskReward.trim()) {
       try {
-        const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", editingTaskId);
+        const taskRef = doc(
+          db,
+          "users",
+          auth.currentUser.uid,
+          "tasks",
+          editingTaskId
+        );
         await updateDoc(taskRef, {
           name: newTaskName,
           reward: parseInt(newTaskReward) || 0,
@@ -185,6 +206,7 @@ export default function TaskListModal({
       transparent={true}
       animationType="fade"
       onRequestClose={onClose}
+      testID="task-modal"
     >
       <View className="flex-1 bg-black/50 items-center justify-center p-5">
         <View className="bg-[#1a1f3a] w-full max-w-md rounded-3xl p-6 border-2 border-purple-500/30 shadow-2xl">
@@ -194,6 +216,7 @@ export default function TaskListModal({
               Task List
             </Text>
             <TouchableOpacity
+              testID="close-task-modal"
               onPress={onClose}
               className="w-10 h-10 items-center justify-center"
             >
@@ -211,78 +234,84 @@ export default function TaskListModal({
           {/* Loading State */}
           {loading ? (
             <View className="items-center justify-center p-4">
-              <Text className="font-madimi text-white text-base">Loading tasks...</Text>
+              <Text className="font-madimi text-white text-base">
+                Loading tasks...
+              </Text>
             </View>
           ) : (
             /* Task List */
             <ScrollView className="max-h-96 mb-4">
               {tasks.length === 0 ? (
                 <View className="items-center justify-center p-4">
-                  <Text className="font-madimi text-white text-base">No tasks yet. Add your first task!</Text>
+                  <Text className="font-madimi text-white text-base">
+                    No tasks yet. Add your first task!
+                  </Text>
                 </View>
               ) : (
                 tasks.map((task) => (
-              <View
-                key={task.id}
-                className={`flex-row items-center justify-between p-4 mb-3 rounded-2xl border-2 ${
-                  task.completed
-                    ? "bg-green-500/20 border-green-400/30"
-                    : "bg-purple-500/10 border-purple-400/30"
-                }`}
-              >
-                <View className="flex-1">
-                  <Text
-                    className={`font-madimi text-white text-base ${
-                      task.completed ? "line-through opacity-60" : ""
-                    }`}
-                  >
-                    {task.name}
-                  </Text>
-                  <View className="flex-row items-center mt-1">
-                    <Image
-                      source={require("../../assets/images/sprites/rocks.png")}
-                      className="w-7 h-7 mr-1"
-                      resizeMode="contain"
-                      style={{ transform: [{ scale: 1 }] }}
-                    />
-                    <Text className="font-orbitron-bold text-purple-300 text-sm ml-1">
-                      {task.reward}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Action Buttons */}
-                <View className="flex-row gap-2">
-                  <TouchableOpacity
-                    onPress={() => handleCompleteTask(task.id)}
-                    className={`w-10 h-10 rounded-full items-center justify-center ${
+                  <View
+                    key={task.id}
+                    className={`flex-row items-center justify-between p-4 mb-3 rounded-2xl border-2 ${
                       task.completed
-                        ? "bg-green-500"
-                        : "bg-gray-500/30 border-2 border-gray-400/30"
+                        ? "bg-green-500/20 border-green-400/30"
+                        : "bg-purple-500/10 border-purple-400/30"
                     }`}
                   >
-                    <Ionicons
-                      name={task.completed ? "checkmark" : "checkmark-outline"}
-                      size={20}
-                      color="white"
-                    />
-                  </TouchableOpacity>
+                    <View className="flex-1">
+                      <Text
+                        className={`font-madimi text-white text-base ${
+                          task.completed ? "line-through opacity-60" : ""
+                        }`}
+                      >
+                        {task.name}
+                      </Text>
+                      <View className="flex-row items-center mt-1">
+                        <Image
+                          source={require("../../assets/images/sprites/rocks.png")}
+                          className="w-7 h-7 mr-1"
+                          resizeMode="contain"
+                          style={{ transform: [{ scale: 1 }] }}
+                        />
+                        <Text className="font-orbitron-bold text-purple-300 text-sm ml-1">
+                          {task.reward}
+                        </Text>
+                      </View>
+                    </View>
 
-                  <TouchableOpacity
-                    onPress={() => handleEditTask(task.id)}
-                    className="w-10 h-10 rounded-full bg-blue-500/30 border-2 border-blue-400/30 items-center justify-center"
-                  >
-                    <Ionicons name="pencil" size={18} color="white" />
-                  </TouchableOpacity>
+                    {/* Action Buttons */}
+                    <View className="flex-row gap-2">
+                      <TouchableOpacity
+                        onPress={() => handleCompleteTask(task.id)}
+                        className={`w-10 h-10 rounded-full items-center justify-center ${
+                          task.completed
+                            ? "bg-green-500"
+                            : "bg-gray-500/30 border-2 border-gray-400/30"
+                        }`}
+                      >
+                        <Ionicons
+                          name={
+                            task.completed ? "checkmark" : "checkmark-outline"
+                          }
+                          size={20}
+                          color="white"
+                        />
+                      </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={() => handleDeleteTask(task.id)}
-                    className="w-10 h-10 rounded-full bg-red-500/30 border-2 border-red-400/30 items-center justify-center"
-                  >
-                    <Ionicons name="trash" size={18} color="white" />
-                  </TouchableOpacity>
-                </View>
-              </View>
+                      <TouchableOpacity
+                        onPress={() => handleEditTask(task.id)}
+                        className="w-10 h-10 rounded-full bg-blue-500/30 border-2 border-blue-400/30 items-center justify-center"
+                      >
+                        <Ionicons name="pencil" size={18} color="white" />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => handleDeleteTask(task.id)}
+                        className="w-10 h-10 rounded-full bg-red-500/30 border-2 border-red-400/30 items-center justify-center"
+                      >
+                        <Ionicons name="trash" size={18} color="white" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 ))
               )}
             </ScrollView>
