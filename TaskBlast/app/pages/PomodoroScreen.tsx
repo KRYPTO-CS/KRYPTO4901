@@ -8,20 +8,34 @@ import {
   AppState,
   Dimensions,
   Easing,
+  TouchableOpacity,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import MainButton from "../components/MainButton";
 import { useAudioPlayer } from "expo-audio";
 
 export default function PomodoroScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+
+  // Extract task parameters from route params
+  const taskName = params.taskName as string || "Work Session";
+  const workTime = params.workTime ? parseInt(params.workTime as string) : 25;
+  const playTime = params.playTime ? parseInt(params.playTime as string) : 5;
+  const cycles = params.cycles ? parseInt(params.cycles as string) : 1;
+  const taskId = params.taskId as string;
+  const allowMinimization = params.allowMinimization === "true" || false;
 
   // Timer state
-  const [timeLeft, setTimeLeft] = useState(1 * 60); // 1 minute in seconds
+  const [timeLeft, setTimeLeft] = useState(workTime * 60); // Convert minutes to seconds
   const [isRunning, setIsRunning] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [finished, setFinished] = useState(false);
-  const totalTime = 1 * 60; // Total duration in seconds
+  const [hasPlayedGame, setHasPlayedGame] = useState(false);
+  const totalTime = workTime * 60; // Total duration in seconds
+  const backgroundTime = useRef<number | null>(null);
+  const tapCount = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
 
@@ -126,24 +140,46 @@ export default function PomodoroScreen() {
     };
   }, [isRunning, isPaused, timeLeft, router]);
 
-  useEffect(() => {
-    if (!finished) return;
-    const id = setTimeout(() => {
-      try {
-        router.push("/pages/GamePage");
-      } catch (e) {
-        console.warn("Navigation error:", e);
-      }
-    }, 0);
-
-    return () => clearTimeout(id);
-  }, [finished, router]);
-
   // Handle app state changes (pause when app goes to background)
   useEffect(() => {
     const handleAppState = (nextState: string) => {
       if (nextState === "background" || nextState === "inactive") {
-        setIsPaused(true);
+        // Pause music when backgrounded
+        try {
+          player.pause();
+        } catch (e) {
+          console.warn("Audio player pause error:", e);
+        }
+        // Record the time when going to background if minimization is allowed and timer is running
+        if (allowMinimization && !isPaused) {
+          backgroundTime.current = Date.now();
+        } else if (!allowMinimization) {
+          // Only pause timer if minimization is not allowed
+          setIsPaused(true);
+        }
+      } else if (nextState === "active") {
+        // Calculate elapsed time if timer was running in background
+        if (allowMinimization && backgroundTime.current !== null && !isPaused) {
+          const elapsed = Math.floor((Date.now() - backgroundTime.current) / 1000);
+          setTimeLeft((prev) => {
+            const newTime = prev - elapsed;
+            if (newTime <= 0) {
+              setIsRunning(false);
+              setFinished(true);
+              return 0;
+            }
+            return newTime;
+          });
+          backgroundTime.current = null;
+        }
+        // Resume music when app becomes active, but only if timer is not paused
+        if (!isPaused) {
+          try {
+            player.play();
+          } catch (e) {
+            console.warn("Audio player play error:", e);
+          }
+        }
       }
     };
 
@@ -157,25 +193,81 @@ export default function PomodoroScreen() {
         sub.remove();
       }
     };
-  }, []);
+  }, [allowMinimization, isPaused, player]);
 
   // Toggle pause
-  const handlePauseLand = async () => {
-    if (!isPaused) {
-      setIsPaused(true);
-      try {
+  const handlePause = async () => {
+    setIsPaused(!isPaused);
+    try {
+      if (!isPaused) {
         player.pause();
-      } catch (e) {
-        console.warn("Audio player pause error:", e);
+      } else {
+        player.play();
       }
+    } catch (e) {
+      console.warn("Audio player pause/play error:", e);
+    }
+  };
+
+  const handleLand = async () => {
+    // Land - go back to home
+    try {
+      player.pause();
+    } catch (e) {
+      console.warn("Audio player error on land:", e);
+    }
+    router.back();
+  };
+
+  const handlePlayGame = () => {
+    try {
+      player.pause();
+    } catch (e) {
+      console.warn("Audio player error on play game:", e);
+    }
+    // Mark that we're entering game mode
+    setHasPlayedGame(true);
+    router.push({
+      pathname: "/pages/GamePage",
+      params: {
+        playTime: playTime.toString(),
+        taskId: taskId || "",
+      },
+    });
+  };
+
+  const handleResumeTask = () => {
+    // Reset timer to work time and restart
+    setTimeLeft(workTime * 60);
+    setIsRunning(true);
+    setIsPaused(false);
+    setFinished(false);
+    setHasPlayedGame(false);
+    try {
+      player.play();
+    } catch (e) {
+      console.warn("Audio player error on resume:", e);
+    }
+  };
+
+  const handleRocketTap = () => {
+    tapCount.current += 1;
+
+    // Clear existing timer
+    if (tapTimer.current) {
+      clearTimeout(tapTimer.current);
+    }
+
+    // Check if triple tap achieved
+    if (tapCount.current === 3) {
+      // Admin bypass: set timer to 10 seconds
+      setTimeLeft(10);
+      tapCount.current = 0;
     } else {
-      // Land - go back to home
-      try {
-        player.pause();
-      } catch (e) {
-        console.warn("Audio player error on land:", e);
-      }
-      router.back();
+      // Reset tap count after 500ms if not triple tapped
+      tapTimer.current = setTimeout(() => {
+        tapCount.current = 0;
+      }, 500);
     }
   };
 
@@ -265,28 +357,66 @@ export default function PomodoroScreen() {
           <Text className="font-orbitron text-white/80 text-lg mt-2">
             Time Remaining
           </Text>
+          {taskName && (
+            <View className="bg-purple-500/20 border-2 border-purple-400/30 px-4 py-2 rounded-xl mt-3">
+              <Text className="font-madimi text-white text-base">
+                {taskName}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Player Image - Centered */}
         <View className="flex-1 items-center justify-center">
-          <Animated.Image
-            testID="spaceship-image"
-            source={require("../../assets/images/sprites/shipAnimated.gif")}
-            className="w-72 h-72"
-            resizeMode="contain"
-            style={{
-              transform: [{ scale: 0.5 }, { translateY: translateFloat }],
-            }}
-          />
+          <TouchableOpacity onPress={handleRocketTap} activeOpacity={1}>
+            <Animated.Image
+              testID="spaceship-image"
+              source={require("../../assets/images/sprites/shipAnimated.gif")}
+              className="w-72 h-72"
+              resizeMode="contain"
+              style={{
+                transform: [{ scale: 0.5 }, { translateY: translateFloat }],
+              }}
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* Pause/Land Button */}
+        {/* Pause/Land Buttons */}
         <View className="items-center mb-24">
-          <MainButton
-            title={isPaused ? "Land" : "Pause"}
-            onPress={handlePauseLand}
-            testID="pause-button"
-          />
+          <View className="flex-col gap-4 w-48">
+            {hasPlayedGame ? (
+              <MainButton
+                title="Resume Task"
+                onPress={handleResumeTask}
+                variant="info"
+                testID="resume-task-button"
+                customStyle={{ width: 192 }}
+              />
+            ) : timeLeft === 0 ? (
+              <MainButton
+                title="Play Game"
+                onPress={handlePlayGame}
+                variant="success"
+                testID="play-game-button"
+                customStyle={{ width: 192 }}
+              />
+            ) : (
+              <MainButton
+                title={isPaused ? "Resume" : "Pause"}
+                onPress={handlePause}
+                variant={isPaused ? "info" : "warning"}
+                testID="pause-button"
+                customStyle={{ width: 192 }}
+              />
+            )}
+            <MainButton
+              title="Land"
+              onPress={handleLand}
+              variant="error"
+              testID="land-button"
+              customStyle={{ width: 192 }}
+            />
+          </View>
         </View>
       </View>
     </View>

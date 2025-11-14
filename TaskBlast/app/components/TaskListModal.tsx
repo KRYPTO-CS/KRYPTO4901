@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { getAuth } from "firebase/auth";
 import {
   getFirestore,
@@ -27,9 +28,13 @@ import {
 interface Task {
   id: string;
   name: string;
+  description: string;
   reward: number;
   completed: boolean;
   allowMinimization: boolean;
+  workTime: number;
+  playTime: number;
+  cycles: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -43,6 +48,7 @@ export default function TaskListModal({
   visible,
   onClose,
 }: TaskListModalProps) {
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,6 +57,7 @@ export default function TaskListModal({
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
+  const pinRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
   const auth = getAuth();
   const db = getFirestore();
 
@@ -94,9 +101,13 @@ export default function TaskListModal({
             taskList.push({
               id: doc.id,
               name: data.name,
+              description: data.description || "",
               reward: data.reward,
               completed: data.completed,
               allowMinimization: data.allowMinimization || false,
+              workTime: data.workTime || 25,
+              playTime: data.playTime || 5,
+              cycles: data.cycles || 1,
               createdAt: data.createdAt || Timestamp.now(),
               updatedAt: data.updatedAt || Timestamp.now(),
             });
@@ -125,9 +136,14 @@ export default function TaskListModal({
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [newTaskName, setNewTaskName] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskReward, setNewTaskReward] = useState("");
   const [newTaskAllowMinimization, setNewTaskAllowMinimization] = useState(false);
+  const [newTaskWorkTime, setNewTaskWorkTime] = useState(25);
+  const [newTaskPlayTime, setNewTaskPlayTime] = useState(5);
+  const [newTaskCycles, setNewTaskCycles] = useState(1);
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showTaskFormModal, setShowTaskFormModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const handleCompleteTask = async (taskId: string) => {
@@ -170,16 +186,25 @@ export default function TaskListModal({
         );
         await addDoc(userTasksRef, {
           name: newTaskName,
+          description: newTaskDescription,
           reward: parseInt(newTaskReward) || 0,
           completed: false,
           allowMinimization: newTaskAllowMinimization,
+          workTime: newTaskWorkTime,
+          playTime: newTaskPlayTime,
+          cycles: newTaskCycles,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
         setNewTaskName("");
+        setNewTaskDescription("");
         setNewTaskReward("");
         setNewTaskAllowMinimization(false);
+        setNewTaskWorkTime(25);
+        setNewTaskPlayTime(5);
+        setNewTaskCycles(1);
         setIsAddingTask(false);
+        setShowTaskFormModal(false);
       } catch (error) {
         console.error("Error adding task:", error);
         Alert.alert("Error", "Failed to add task");
@@ -191,10 +216,15 @@ export default function TaskListModal({
     const task = tasks.find((t) => t.id === taskId);
     if (task) {
       setNewTaskName(task.name);
+      setNewTaskDescription(task.description || "");
       setNewTaskReward(task.reward.toString());
       setNewTaskAllowMinimization(task.allowMinimization);
+      setNewTaskWorkTime(task.workTime || 25);
+      setNewTaskPlayTime(task.playTime || 5);
+      setNewTaskCycles(task.cycles || 1);
       setEditingTaskId(taskId);
       setIsAddingTask(true);
+      setShowTaskFormModal(true);
     }
   };
 
@@ -211,14 +241,23 @@ export default function TaskListModal({
         );
         await updateDoc(taskRef, {
           name: newTaskName,
+          description: newTaskDescription,
           reward: parseInt(newTaskReward) || 0,
           allowMinimization: newTaskAllowMinimization,
+          workTime: newTaskWorkTime,
+          playTime: newTaskPlayTime,
+          cycles: newTaskCycles,
           updatedAt: serverTimestamp(),
         });
         setNewTaskName("");
+        setNewTaskDescription("");
         setNewTaskReward("");
         setNewTaskAllowMinimization(false);
+        setNewTaskWorkTime(25);
+        setNewTaskPlayTime(5);
+        setNewTaskCycles(1);
         setIsAddingTask(false);
+        setShowTaskFormModal(false);
         setEditingTaskId(null);
       } catch (error) {
         console.error("Error updating task:", error);
@@ -229,9 +268,14 @@ export default function TaskListModal({
 
   const handleCancelAdd = () => {
     setNewTaskName("");
+    setNewTaskDescription("");
     setNewTaskReward("");
     setNewTaskAllowMinimization(false);
+    setNewTaskWorkTime(25);
+    setNewTaskPlayTime(5);
+    setNewTaskCycles(1);
     setIsAddingTask(false);
+    setShowTaskFormModal(false);
     setEditingTaskId(null);
   };
 
@@ -266,6 +310,52 @@ export default function TaskListModal({
     setPinError("");
   };
 
+  const handlePinDigitChange = (digit: string, index: number) => {
+    // Only allow single digit
+    const sanitized = digit.replace(/[^0-9]/g, "").slice(0, 1);
+    
+    const pinArray = pinInput.padEnd(4, " ").split("");
+    pinArray[index] = sanitized;
+    const newPin = pinArray.join("").replace(/\s/g, "");
+    
+    setPinInput(newPin);
+    
+    // Auto-focus next input if digit entered
+    if (sanitized && index < 3) {
+      // Small delay to prevent the number from showing
+      setTimeout(() => {
+        pinRefs.current[index + 1]?.focus();
+      }, 0);
+    }
+  };
+
+  const handlePinKeyPress = (e: any, index: number) => {
+    // Handle backspace to delete current and move to previous
+    if (e.nativeEvent.key === "Backspace") {
+      const pinArray = pinInput.padEnd(4, " ").split("");
+      
+      if (pinInput[index]) {
+        // Clear current digit
+        pinArray[index] = "";
+        const newPin = pinArray.join("").replace(/\s/g, "");
+        setPinInput(newPin);
+        
+        // Move to previous box (unless it's the last box)
+        if (index > 0 && index < 3) {
+          setTimeout(() => {
+            pinRefs.current[index - 1]?.focus();
+          }, 0);
+        }
+      } else if (index > 0) {
+        // Current is empty, move to previous and clear it
+        pinArray[index - 1] = "";
+        const newPin = pinArray.join("").replace(/\s/g, "");
+        setPinInput(newPin);
+        pinRefs.current[index - 1]?.focus();
+      }
+    }
+  };
+
   const handleShowInfo = (task: Task) => {
     setSelectedTask(task);
     setShowInfoModal(true);
@@ -274,6 +364,22 @@ export default function TaskListModal({
   const handleCloseInfo = () => {
     setShowInfoModal(false);
     setSelectedTask(null);
+  };
+
+  const handleStartTask = (task: Task) => {
+    // Close the modal and navigate to Pomodoro screen with task data
+    onClose();
+    router.push({
+      pathname: "/pages/PomodoroScreen",
+      params: {
+        taskId: task.id,
+        taskName: task.name,
+        workTime: task.workTime.toString(),
+        playTime: task.playTime.toString(),
+        cycles: task.cycles.toString(),
+        allowMinimization: task.allowMinimization.toString(),
+      },
+    });
   };
 
   return (
@@ -459,9 +565,7 @@ export default function TaskListModal({
                           </TouchableOpacity>
 
                           <TouchableOpacity
-                            onPress={() => {
-                              /* Start task functionality to be implemented */
-                            }}
+                            onPress={() => handleStartTask(task)}
                             className="w-10 h-10 rounded-full bg-blue-500/30 border-2 border-blue-400/30 items-center justify-center mr-1"
                           >
                             <Ionicons name="play" size={18} color="white" />
@@ -486,18 +590,65 @@ export default function TaskListModal({
             </ScrollView>
           )}
 
-          {/* Add/Edit Task Form */}
-          {isEditMode && isAddingTask && (
-            <View className="bg-yellow-900/40 p-4 rounded-2xl mb-4 border-2 border-yellow-400/30">
-              <Text className="font-orbitron-bold text-yellow-200 text-lg mb-3">
+          {/* Add Task Button */}
+          {isEditMode && (
+            <TouchableOpacity
+              onPress={() => {
+                setIsAddingTask(true);
+                setShowTaskFormModal(true);
+              }}
+              className="bg-gradient-to-r from-yellow-600 to-amber-600 py-4 rounded-2xl items-center border-2 border-yellow-400/40 shadow-lg"
+            >
+              <View className="flex-row items-center">
+                <Ionicons name="add-circle" size={24} color="white" />
+                <Text className="font-orbitron-bold text-white text-lg ml-2">
+                  Add New Task
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Task Form Modal */}
+      <Modal
+        visible={showTaskFormModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelAdd}
+      >
+        <View className="flex-1 bg-black/70 items-center justify-center p-5">
+          <View className="bg-[#2a2416] w-full max-w-md rounded-3xl p-6 border-2 border-yellow-500/50 shadow-2xl">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="font-orbitron-bold text-yellow-300 text-2xl">
                 {editingTaskId ? "Edit Task" : "New Task"}
               </Text>
+              <TouchableOpacity
+                onPress={handleCancelAdd}
+                className="w-10 h-10 items-center justify-center"
+              >
+                <Ionicons name="close" size={28} color="white" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView className="max-h-96">
               <TextInput
                 className="font-madimi w-full h-12 bg-white/10 border border-yellow-400/30 rounded-lg px-4 mb-3 text-base text-white"
                 placeholder="Task name"
                 placeholderTextColor="#999"
                 value={newTaskName}
                 onChangeText={setNewTaskName}
+              />
+              <TextInput
+                className="font-madimi w-full bg-white/10 border border-yellow-400/30 rounded-lg px-4 py-3 mb-3 text-base text-white"
+                placeholder="Description (optional, max 200 characters)"
+                placeholderTextColor="#999"
+                value={newTaskDescription}
+                onChangeText={(text) => setNewTaskDescription(text.slice(0, 200))}
+                multiline
+                numberOfLines={3}
+                maxLength={200}
+                textAlignVertical="top"
               />
               <TextInput
                 className="font-madimi w-full h-12 bg-white/10 border border-yellow-400/30 rounded-lg px-4 mb-3 text-base text-white"
@@ -526,43 +677,106 @@ export default function TaskListModal({
                   />
                 </View>
               </TouchableOpacity>
-              <View className="flex-row gap-2">
-                <TouchableOpacity
-                  onPress={editingTaskId ? handleSaveEdit : handleAddTask}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 py-3 rounded-xl items-center border-2 border-green-300/30"
-                >
-                  <Text className="font-orbitron-bold text-white text-base">
-                    {editingTaskId ? "Save" : "Add"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleCancelAdd}
-                  className="flex-1 bg-gray-500/30 py-3 rounded-xl items-center border-2 border-gray-400/30"
-                >
-                  <Text className="font-orbitron-bold text-white text-base">
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
 
-          {/* Add Task Button */}
-          {isEditMode && !isAddingTask && (
-            <TouchableOpacity
-              onPress={() => setIsAddingTask(true)}
-              className="bg-gradient-to-r from-yellow-600 to-amber-600 py-4 rounded-2xl items-center border-2 border-yellow-400/40 shadow-lg"
-            >
-              <View className="flex-row items-center">
-                <Ionicons name="add-circle" size={24} color="white" />
-                <Text className="font-orbitron-bold text-white text-lg ml-2">
-                  Add New Task
+              {/* Pomodoro Settings */}
+              <Text className="font-madimi text-yellow-200 text-sm mb-2">
+                Pomodoro Settings
+              </Text>
+              
+              {/* Work Time */}
+              <View className="bg-white/10 border border-yellow-400/30 rounded-lg px-4 py-3 mb-3">
+                <Text className="font-madimi text-white text-sm mb-2">
+                  Work Time (minutes)
                 </Text>
+                <View className="flex-row items-center justify-between">
+                  <TouchableOpacity
+                    onPress={() => setNewTaskWorkTime(Math.max(5, newTaskWorkTime - 5))}
+                    className="w-10 h-10 bg-yellow-600/40 border border-yellow-500/50 rounded-lg items-center justify-center"
+                  >
+                    <Ionicons name="remove" size={20} color="white" />
+                  </TouchableOpacity>
+                  <Text className="font-orbitron-bold text-white text-xl">
+                    {newTaskWorkTime}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setNewTaskWorkTime(newTaskWorkTime + 5)}
+                    className="w-10 h-10 bg-yellow-600/40 border border-yellow-500/50 rounded-lg items-center justify-center"
+                  >
+                    <Ionicons name="add" size={20} color="white" />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </TouchableOpacity>
-          )}
+
+              {/* Play Time */}
+              <View className="bg-white/10 border border-yellow-400/30 rounded-lg px-4 py-3 mb-3">
+                <Text className="font-madimi text-white text-sm mb-2">
+                  Play Time (minutes)
+                </Text>
+                <View className="flex-row items-center justify-between">
+                  <TouchableOpacity
+                    onPress={() => setNewTaskPlayTime(Math.max(5, newTaskPlayTime - 5))}
+                    className="w-10 h-10 bg-yellow-600/40 border border-yellow-500/50 rounded-lg items-center justify-center"
+                  >
+                    <Ionicons name="remove" size={20} color="white" />
+                  </TouchableOpacity>
+                  <Text className="font-orbitron-bold text-white text-xl">
+                    {newTaskPlayTime}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setNewTaskPlayTime(newTaskPlayTime + 5)}
+                    className="w-10 h-10 bg-yellow-600/40 border border-yellow-500/50 rounded-lg items-center justify-center"
+                  >
+                    <Ionicons name="add" size={20} color="white" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Cycles */}
+              <View className="bg-white/10 border border-yellow-400/30 rounded-lg px-4 py-3 mb-3">
+                <Text className="font-madimi text-white text-sm mb-2">
+                  Number of Cycles
+                </Text>
+                <View className="flex-row items-center justify-between">
+                  <TouchableOpacity
+                    onPress={() => setNewTaskCycles(Math.max(1, newTaskCycles - 1))}
+                    className="w-10 h-10 bg-yellow-600/40 border border-yellow-500/50 rounded-lg items-center justify-center"
+                  >
+                    <Ionicons name="remove" size={20} color="white" />
+                  </TouchableOpacity>
+                  <Text className="font-orbitron-bold text-white text-xl">
+                    {newTaskCycles}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setNewTaskCycles(newTaskCycles + 1)}
+                    className="w-10 h-10 bg-yellow-600/40 border border-yellow-500/50 rounded-lg items-center justify-center"
+                  >
+                    <Ionicons name="add" size={20} color="white" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View className="flex-row gap-2 mt-4">
+              <TouchableOpacity
+                onPress={handleCancelAdd}
+                className="flex-1 bg-gray-500/30 py-3 rounded-xl items-center border-2 border-gray-400/30"
+              >
+                <Text className="font-orbitron-bold text-white text-base">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={editingTaskId ? handleSaveEdit : handleAddTask}
+                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 py-3 rounded-xl items-center border-2 border-green-300/30"
+              >
+                <Text className="font-orbitron-bold text-white text-base">
+                  {editingTaskId ? "Save" : "Add"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
-      </View>
+      </Modal>
 
       {/* PIN Verification Modal */}
       <Modal
@@ -587,27 +801,31 @@ export default function TaskListModal({
             </Text>
 
             <View className="mb-4">
-              <View className="flex-row items-center bg-yellow-900/30 border-2 border-yellow-500/40 rounded-xl px-4 h-14">
-                <Ionicons
-                  name="key-outline"
-                  size={22}
-                  color="#fbbf24"
-                  style={{ marginRight: 10 }}
-                />
-                <TextInput
-                  className="font-madimi flex-1 text-base text-yellow-100 text-center text-2xl tracking-widest"
-                  placeholder="••••"
-                  placeholderTextColor="rgba(251, 191, 36, 0.3)"
-                  value={pinInput}
-                  onChangeText={(t) =>
-                    setPinInput(t.replace(/[^0-9]/g, "").slice(0, 4))
-                  }
-                  keyboardType="number-pad"
-                  secureTextEntry
-                  maxLength={4}
-                  autoFocus
-                  onSubmitEditing={handlePinSubmit}
-                />
+              <View className="flex-row justify-center gap-3">
+                {[0, 1, 2, 3].map((index) => (
+                  <View
+                    key={index}
+                    className="bg-yellow-900/30 border-2 border-yellow-500/40 rounded-xl w-16 h-16 items-center justify-center"
+                  >
+                    <TextInput
+                      ref={(ref) => { pinRefs.current[index] = ref; }}
+                      className="font-orbitron-bold text-3xl text-yellow-100 text-center w-full opacity-0"
+                      value={pinInput[index] || ""}
+                      onChangeText={(digit) => handlePinDigitChange(digit, index)}
+                      onKeyPress={(e) => handlePinKeyPress(e, index)}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      autoFocus={index === 0}
+                      selectTextOnFocus
+                      caretHidden={true}
+                    />
+                    <View className="absolute inset-0 items-center justify-center pointer-events-none">
+                      <Text className="font-orbitron-bold text-3xl text-yellow-100">
+                        {pinInput[index] ? "•" : ""}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             </View>
 
@@ -677,6 +895,17 @@ export default function TaskListModal({
                     {selectedTask.name}
                   </Text>
 
+                  {selectedTask.description && (
+                    <>
+                      <Text className="font-madimi text-purple-300 text-sm mb-1">
+                        Description
+                      </Text>
+                      <Text className="font-madimi text-white text-base mb-4">
+                        {selectedTask.description}
+                      </Text>
+                    </>
+                  )}
+
                   <Text className="font-madimi text-purple-300 text-sm mb-1">
                     Reward
                   </Text>
@@ -734,6 +963,36 @@ export default function TaskListModal({
                         }`}
                       >
                         {selectedTask.allowMinimization ? "Yes" : "No"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text className="font-madimi text-purple-300 text-sm mb-1">
+                    Pomodoro Settings
+                  </Text>
+                  <View className="flex-row justify-between mb-4">
+                    <View className="bg-purple-600/20 border border-purple-500/40 rounded-lg px-3 py-2 flex-1 mr-2">
+                      <Text className="font-madimi text-purple-300 text-xs mb-1">
+                        Work Time
+                      </Text>
+                      <Text className="font-orbitron-bold text-white text-base">
+                        {selectedTask.workTime} min
+                      </Text>
+                    </View>
+                    <View className="bg-purple-600/20 border border-purple-500/40 rounded-lg px-3 py-2 flex-1 mr-2">
+                      <Text className="font-madimi text-purple-300 text-xs mb-1">
+                        Play Time
+                      </Text>
+                      <Text className="font-orbitron-bold text-white text-base">
+                        {selectedTask.playTime} min
+                      </Text>
+                    </View>
+                    <View className="bg-purple-600/20 border border-purple-500/40 rounded-lg px-3 py-2 flex-1">
+                      <Text className="font-madimi text-purple-300 text-xs mb-1">
+                        Cycles
+                      </Text>
+                      <Text className="font-orbitron-bold text-white text-base">
+                        {selectedTask.cycles}
                       </Text>
                     </View>
                   </View>

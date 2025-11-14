@@ -1,13 +1,14 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
   View,
   Text,
   Pressable,
+  TouchableOpacity,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 let WebView: any = null;
@@ -23,6 +24,61 @@ export default function GamePage() {
   const [loading, setLoading] = useState(true);
   const webviewRef = useRef<any>(null);
   const router = useRouter();
+  const params = useLocalSearchParams();
+  
+  const playTime = params.playTime ? parseInt(params.playTime as string) : 5;
+  const taskId = params.taskId as string;
+  
+  const [timeLeft, setTimeLeft] = useState(playTime * 60); // Convert minutes to seconds
+  const tapCount = useRef(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Game timer logic
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      router.back();
+      return;
+    }
+
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [timeLeft, router]);
+
+  // Format time as MM:SS
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
+
+  const handleTimerTap = () => {
+    tapCount.current += 1;
+
+    // Clear existing timer
+    if (tapTimer.current) {
+      clearTimeout(tapTimer.current);
+    }
+
+    // Check if triple tap achieved
+    if (tapCount.current === 3) {
+      // Admin bypass: set timer to 10 seconds
+      setTimeLeft(10);
+      tapCount.current = 0;
+    } else {
+      // Reset tap count after 500ms if not triple tapped
+      tapTimer.current = setTimeout(() => {
+        tapCount.current = 0;
+      }, 500);
+    }
+  };
 
   const handleMessage = useCallback((event: any) => {
     try {
@@ -85,6 +141,9 @@ export default function GamePage() {
         >
           <Text style={styles.backText}>{"< Back"}</Text>
         </Pressable>
+        <TouchableOpacity onPress={handleTimerTap} activeOpacity={1} style={styles.timerContainer}>
+          <Text style={styles.timerText}>{formatTime(timeLeft)}</Text>
+        </TouchableOpacity>
         <Pressable onPress={sendMessageToGodot} style={styles.rightButton}>
           <Text style={styles.rightText}>Send</Text>
         </Pressable>
@@ -175,6 +234,16 @@ const styles = StyleSheet.create({
   rightText: {
     color: "#fff",
     fontSize: 16,
+  },
+  timerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  timerText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
   },
   loader: {
     position: "absolute",
