@@ -29,6 +29,7 @@ interface Task {
   name: string;
   reward: number;
   completed: boolean;
+  allowMinimization: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -95,6 +96,7 @@ export default function TaskListModal({
               name: data.name,
               reward: data.reward,
               completed: data.completed,
+              allowMinimization: data.allowMinimization || false,
               createdAt: data.createdAt || Timestamp.now(),
               updatedAt: data.updatedAt || Timestamp.now(),
             });
@@ -124,6 +126,7 @@ export default function TaskListModal({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [newTaskName, setNewTaskName] = useState("");
   const [newTaskReward, setNewTaskReward] = useState("");
+  const [newTaskAllowMinimization, setNewTaskAllowMinimization] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
@@ -169,11 +172,13 @@ export default function TaskListModal({
           name: newTaskName,
           reward: parseInt(newTaskReward) || 0,
           completed: false,
+          allowMinimization: newTaskAllowMinimization,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
         setNewTaskName("");
         setNewTaskReward("");
+        setNewTaskAllowMinimization(false);
         setIsAddingTask(false);
       } catch (error) {
         console.error("Error adding task:", error);
@@ -187,6 +192,7 @@ export default function TaskListModal({
     if (task) {
       setNewTaskName(task.name);
       setNewTaskReward(task.reward.toString());
+      setNewTaskAllowMinimization(task.allowMinimization);
       setEditingTaskId(taskId);
       setIsAddingTask(true);
     }
@@ -206,10 +212,12 @@ export default function TaskListModal({
         await updateDoc(taskRef, {
           name: newTaskName,
           reward: parseInt(newTaskReward) || 0,
+          allowMinimization: newTaskAllowMinimization,
           updatedAt: serverTimestamp(),
         });
         setNewTaskName("");
         setNewTaskReward("");
+        setNewTaskAllowMinimization(false);
         setIsAddingTask(false);
         setEditingTaskId(null);
       } catch (error) {
@@ -222,6 +230,7 @@ export default function TaskListModal({
   const handleCancelAdd = () => {
     setNewTaskName("");
     setNewTaskReward("");
+    setNewTaskAllowMinimization(false);
     setIsAddingTask(false);
     setEditingTaskId(null);
   };
@@ -498,6 +507,25 @@ export default function TaskListModal({
                 onChangeText={setNewTaskReward}
                 keyboardType="numeric"
               />
+              <TouchableOpacity
+                onPress={() => setNewTaskAllowMinimization(!newTaskAllowMinimization)}
+                className="flex-row items-center justify-between bg-white/10 border border-yellow-400/30 rounded-lg px-4 py-3 mb-3"
+              >
+                <Text className="font-madimi text-white text-base">
+                  Allow Minimization
+                </Text>
+                <View
+                  className={`w-12 h-6 rounded-full flex-row items-center px-1 ${
+                    newTaskAllowMinimization ? "bg-green-500" : "bg-gray-500"
+                  }`}
+                >
+                  <View
+                    className={`w-4 h-4 rounded-full bg-white ${
+                      newTaskAllowMinimization ? "ml-auto" : "ml-0"
+                    }`}
+                  />
+                </View>
+              </TouchableOpacity>
               <View className="flex-row gap-2">
                 <TouchableOpacity
                   onPress={editingTaskId ? handleSaveEdit : handleAddTask}
@@ -683,6 +711,29 @@ export default function TaskListModal({
                         }`}
                       >
                         {selectedTask.completed ? "Complete" : "Incomplete"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text className="font-madimi text-purple-300 text-sm mb-1">
+                    Allow Minimization
+                  </Text>
+                  <View className="flex-row items-center mb-4">
+                    <View
+                      className={`px-3 py-1 rounded-full ${
+                        selectedTask.allowMinimization
+                          ? "bg-green-500/30 border border-green-400/50"
+                          : "bg-red-500/30 border border-red-400/50"
+                      }`}
+                    >
+                      <Text
+                        className={`font-orbitron-bold text-sm ${
+                          selectedTask.allowMinimization
+                            ? "text-green-300"
+                            : "text-red-300"
+                        }`}
+                      >
+                        {selectedTask.allowMinimization ? "Yes" : "No"}
                       </Text>
                     </View>
                   </View>
