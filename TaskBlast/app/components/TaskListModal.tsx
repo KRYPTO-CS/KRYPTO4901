@@ -124,6 +124,8 @@ export default function TaskListModal({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [newTaskName, setNewTaskName] = useState("");
   const [newTaskReward, setNewTaskReward] = useState("");
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const handleCompleteTask = async (taskId: string) => {
     if (!auth.currentUser) return;
@@ -253,6 +255,16 @@ export default function TaskListModal({
     setShowPinModal(false);
     setPinInput("");
     setPinError("");
+  };
+
+  const handleShowInfo = (task: Task) => {
+    setSelectedTask(task);
+    setShowInfoModal(true);
+  };
+
+  const handleCloseInfo = () => {
+    setShowInfoModal(false);
+    setSelectedTask(null);
   };
 
   return (
@@ -447,9 +459,7 @@ export default function TaskListModal({
                           </TouchableOpacity>
 
                           <TouchableOpacity
-                            onPress={() => {
-                              /* Info functionality to be implemented */
-                            }}
+                            onPress={() => handleShowInfo(task)}
                             className="w-10 h-10 rounded-full bg-purple-500/30 border-2 border-purple-400/30 items-center justify-center"
                           >
                             <Ionicons
@@ -604,6 +614,106 @@ export default function TaskListModal({
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Task Info Modal */}
+      <Modal
+        visible={showInfoModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseInfo}
+      >
+        <View className="flex-1 bg-black/70 items-center justify-center p-5">
+          <View className="bg-[#1a1f3a] w-full max-w-sm rounded-3xl p-6 border-2 border-purple-500/30 shadow-2xl">
+            <View className="flex-row justify-between items-center mb-4">
+              <Text className="font-orbitron-bold text-white text-2xl">
+                Task Info
+              </Text>
+              <TouchableOpacity
+                onPress={handleCloseInfo}
+                className="w-10 h-10 items-center justify-center"
+              >
+                <Ionicons name="close" size={28} color="white" />
+              </TouchableOpacity>
+            </View>
+
+            {selectedTask && (
+              <View>
+                <View className="bg-purple-500/10 border-2 border-purple-400/30 rounded-2xl p-4 mb-4">
+                  <Text className="font-madimi text-purple-300 text-sm mb-1">
+                    Task Name
+                  </Text>
+                  <Text className="font-orbitron-bold text-white text-lg mb-4">
+                    {selectedTask.name}
+                  </Text>
+
+                  <Text className="font-madimi text-purple-300 text-sm mb-1">
+                    Reward
+                  </Text>
+                  <View className="flex-row items-center mb-4">
+                    <Image
+                      source={require("../../assets/images/sprites/rocks.png")}
+                      className="w-8 h-8 mr-2"
+                      resizeMode="contain"
+                      style={{ transform: [{ scale: 1 }] }}
+                    />
+                    <Text className="font-orbitron-bold text-white text-xl">
+                      {selectedTask.reward}
+                    </Text>
+                  </View>
+
+                  <Text className="font-madimi text-purple-300 text-sm mb-1">
+                    Status
+                  </Text>
+                  <View className="flex-row items-center mb-4">
+                    <View
+                      className={`px-3 py-1 rounded-full ${
+                        selectedTask.completed
+                          ? "bg-green-500/30 border border-green-400/50"
+                          : "bg-gray-500/30 border border-gray-400/50"
+                      }`}
+                    >
+                      <Text
+                        className={`font-orbitron-bold text-sm ${
+                          selectedTask.completed
+                            ? "text-green-300"
+                            : "text-gray-300"
+                        }`}
+                      >
+                        {selectedTask.completed ? "Complete" : "Incomplete"}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text className="font-madimi text-purple-300 text-sm mb-1">
+                    Created
+                  </Text>
+                  <Text className="font-madimi text-white text-base mb-4">
+                    {new Date(selectedTask.createdAt.seconds * 1000).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleCloseInfo}
+                  className="bg-purple-500 py-3 rounded-xl items-center border-2 border-purple-400/30"
+                >
+                  <Text className="font-orbitron-bold text-white text-base">
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
