@@ -10,6 +10,8 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { getAuth } from "firebase/auth";
+import { getFirestore, doc, updateDoc, increment } from "firebase/firestore";
 
 let WebView: any = null;
 try {
@@ -33,9 +35,60 @@ export default function GamePage() {
   const tapCount = useRef(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const saveRocksToDatabase = async (score: number) => {
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const db = getFirestore();
+      const userRef = doc(db, "users", user.uid);
+      
+      // Add the score to the user's rocks
+      await updateDoc(userRef, {
+        rocks: increment(score)
+      });
+      
+      console.log(`Added ${score} rocks to user's account`);
+    } catch (err) {
+      console.warn("Failed to save rocks to database", err);
+    }
+  };
+
+  const handleBackPress = async () => {
+    // Save score before going back
+    try {
+      const scoreStr = await AsyncStorage.getItem("game_score");
+      const score = scoreStr ? Math.max(0, Math.floor(Number(scoreStr))) : 0;
+      if (score > 0) {
+        await saveRocksToDatabase(score);
+        // Clear the temporary score
+        await AsyncStorage.removeItem("game_score");
+      }
+    } catch (err) {
+      console.warn("Failed to process game score on back", err);
+    }
+    router.back();
+  };
+
   // Game timer logic
   useEffect(() => {
     if (timeLeft <= 0) {
+      // Get final score from AsyncStorage and save to database
+      (async () => {
+        try {
+          const scoreStr = await AsyncStorage.getItem("game_score");
+          const score = scoreStr ? Math.max(0, Math.floor(Number(scoreStr))) : 0;
+          if (score > 0) {
+            await saveRocksToDatabase(score);
+            // Clear the temporary score
+            await AsyncStorage.removeItem("game_score");
+          }
+        } catch (err) {
+          console.warn("Failed to process game score", err);
+        }
+      })();
+      
       router.back();
       return;
     }
@@ -69,8 +122,8 @@ export default function GamePage() {
 
     // Check if triple tap achieved
     if (tapCount.current === 3) {
-      // Admin bypass: set timer to 10 seconds
-      setTimeLeft(10);
+      // Admin bypass: set timer to 3 seconds
+      setTimeLeft(3);
       tapCount.current = 0;
     } else {
       // Reset tap count after 500ms if not triple tapped
@@ -135,7 +188,7 @@ export default function GamePage() {
       <View testID="safe-area-view" style={{ flex: 1 }}>
         <View style={styles.header} testID="game-header">
         <Pressable
-          onPress={() => router.back()}
+          onPress={handleBackPress}
           style={styles.backButton}
           testID="back-button"
         >

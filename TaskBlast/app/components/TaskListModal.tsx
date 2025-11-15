@@ -35,6 +35,7 @@ interface Task {
   workTime: number;
   playTime: number;
   cycles: number;
+  completedCycles: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -60,6 +61,15 @@ export default function TaskListModal({
   const pinRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
   const auth = getAuth();
   const db = getFirestore();
+
+  // Reset to normal mode when modal becomes visible
+  useEffect(() => {
+    if (visible) {
+      setIsEditMode(false);
+      setIsAddingTask(false);
+      setEditingTaskId(null);
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (!auth.currentUser) {
@@ -108,6 +118,7 @@ export default function TaskListModal({
               workTime: data.workTime || 25,
               playTime: data.playTime || 5,
               cycles: data.cycles || 1,
+              completedCycles: data.completedCycles || 0,
               createdAt: data.createdAt || Timestamp.now(),
               updatedAt: data.updatedAt || Timestamp.now(),
             });
@@ -145,13 +156,20 @@ export default function TaskListModal({
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showTaskFormModal, setShowTaskFormModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const taskTapCount = useRef<{[key: string]: number}>({});
+  const taskTapTimer = useRef<{[key: string]: ReturnType<typeof setTimeout>}>({});
 
   const handleCompleteTask = async (taskId: string) => {
     if (!auth.currentUser) return;
     try {
-      const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", taskId);
       const task = tasks.find((t) => t.id === taskId);
       if (task) {
+        // Prevent marking as complete if cycles aren't fulfilled (only in normal mode)
+        if (!isEditMode && !task.completed && task.completedCycles < task.cycles) {
+          return;
+        }
+        
+        const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", taskId);
         await updateDoc(taskRef, {
           completed: !task.completed,
           updatedAt: serverTimestamp(),
@@ -193,6 +211,7 @@ export default function TaskListModal({
           workTime: newTaskWorkTime,
           playTime: newTaskPlayTime,
           cycles: newTaskCycles,
+          completedCycles: 0,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -382,6 +401,41 @@ export default function TaskListModal({
     });
   };
 
+  const handleTaskTap = async (taskId: string) => {
+    if (!taskTapCount.current[taskId]) {
+      taskTapCount.current[taskId] = 0;
+    }
+    
+    taskTapCount.current[taskId] += 1;
+
+    // Clear existing timer for this task
+    if (taskTapTimer.current[taskId]) {
+      clearTimeout(taskTapTimer.current[taskId]);
+    }
+
+    // Check if triple tap achieved
+    if (taskTapCount.current[taskId] === 3) {
+      // Admin bypass: reset completedCycles to 0
+      try {
+        if (!auth.currentUser) return;
+        const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", taskId);
+        await updateDoc(taskRef, {
+          completedCycles: 0,
+          updatedAt: serverTimestamp(),
+        });
+        console.log("Reset completedCycles to 0 for task:", taskId);
+      } catch (error) {
+        console.error("Error resetting completedCycles:", error);
+      }
+      taskTapCount.current[taskId] = 0;
+    } else {
+      // Reset tap count after 500ms if not triple tapped
+      taskTapTimer.current[taskId] = setTimeout(() => {
+        taskTapCount.current[taskId] = 0;
+      }, 500);
+    }
+  };
+
   return (
     <Modal
       visible={visible}
@@ -481,7 +535,11 @@ export default function TaskListModal({
                         : "bg-purple-500/10 border-purple-400/30"
                     }`}
                   >
-                    <View className="flex-1">
+                    <TouchableOpacity 
+                      className="flex-1"
+                      onPress={() => handleTaskTap(task.id)}
+                      activeOpacity={1}
+                    >
                       <Text
                         className={`font-madimi text-white text-base ${
                           task.completed ? "line-through opacity-60" : ""
@@ -503,8 +561,13 @@ export default function TaskListModal({
                         >
                           {task.reward}
                         </Text>
+                        <Text className={`font-orbitron-bold text-sm ml-3 ${
+                          task.completedCycles >= task.cycles ? "text-green-400" : "text-yellow-400"
+                        }`}>
+                          {task.completedCycles}/{task.cycles}
+                        </Text>
                       </View>
-                    </View>
+                    </TouchableOpacity>
 
                     {/* Action Buttons */}
                     <View className="flex-row gap-2">
@@ -547,10 +610,13 @@ export default function TaskListModal({
                         <View className="flex-row">
                           <TouchableOpacity
                             onPress={() => handleCompleteTask(task.id)}
+                            disabled={!task.completed && task.completedCycles < task.cycles}
                             className={`w-10 h-10 rounded-full items-center justify-center mr-1 ${
                               task.completed
                                 ? "bg-green-500"
-                                : "bg-green-500/30 border-2 border-green-400/30"
+                                : task.completedCycles >= task.cycles
+                                ? "bg-green-500/30 border-2 border-green-400/30"
+                                : "bg-gray-500/20 border-2 border-gray-400/20"
                             }`}
                           >
                             <Ionicons
@@ -560,7 +626,7 @@ export default function TaskListModal({
                                   : "checkmark-outline"
                               }
                               size={20}
-                              color="white"
+                              color={!task.completed && task.completedCycles < task.cycles ? "#666" : "white"}
                             />
                           </TouchableOpacity>
 
@@ -992,7 +1058,7 @@ export default function TaskListModal({
                         Cycles
                       </Text>
                       <Text className="font-orbitron-bold text-white text-base">
-                        {selectedTask.cycles}
+                        {selectedTask.completedCycles}/{selectedTask.cycles}
                       </Text>
                     </View>
                   </View>

@@ -13,6 +13,8 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import MainButton from "../components/MainButton";
 import { useAudioPlayer } from "expo-audio";
+import { getAuth } from "firebase/auth";
+import { getFirestore, doc, updateDoc, increment, getDoc } from "firebase/firestore";
 
 export default function PomodoroScreen() {
   const router = useRouter();
@@ -32,6 +34,8 @@ export default function PomodoroScreen() {
   const [isPaused, setIsPaused] = useState(false);
   const [finished, setFinished] = useState(false);
   const [hasPlayedGame, setHasPlayedGame] = useState(false);
+  const [isTaskCompleted, setIsTaskCompleted] = useState(false);
+  const [currentCompletedCycles, setCurrentCompletedCycles] = useState(0);
   const totalTime = workTime * 60; // Total duration in seconds
   const backgroundTime = useRef<number | null>(null);
   const tapCount = useRef(0);
@@ -57,6 +61,33 @@ export default function PomodoroScreen() {
     loop.start();
     return () => loop.stop();
   }, [scrollAnim]);
+
+  // Check if task is already completed on mount
+  useEffect(() => {
+    const checkTaskCompletion = async () => {
+      if (!taskId) return;
+      
+      try {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const db = getFirestore();
+        const taskRef = doc(db, "users", user.uid, "tasks", taskId);
+        const taskDoc = await getDoc(taskRef);
+        
+        if (taskDoc.exists()) {
+          const taskData = taskDoc.data();
+          setIsTaskCompleted(taskData.completed || false);
+          setCurrentCompletedCycles(taskData.completedCycles || 0);
+        }
+      } catch (err) {
+        console.warn("Failed to check task completion:", err);
+      }
+    };
+
+    checkTaskCompletion();
+  }, [taskId]);
 
   // Interpolate translateY from 0 -> windowHeight
   const translateY = scrollAnim.interpolate({
@@ -112,6 +143,47 @@ export default function PomodoroScreen() {
     };
   }, []);
 
+  // Function to increment completedCycles in database
+  const incrementCompletedCycles = async () => {
+    if (!taskId) return;
+    
+    try {
+      const auth = getAuth();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const db = getFirestore();
+      const taskRef = doc(db, "users", user.uid, "tasks", taskId);
+      
+      await updateDoc(taskRef, {
+        completedCycles: increment(1)
+      });
+      
+      console.log("Incremented completed cycles for task");
+      
+      // Check if all cycles are now completed
+      const taskDoc = await getDoc(taskRef);
+      if (taskDoc.exists()) {
+        const taskData = taskDoc.data();
+        const completedCycles = taskData.completedCycles || 0;
+        const totalCycles = taskData.cycles || 1;
+        
+        setCurrentCompletedCycles(completedCycles);
+        
+        if (completedCycles >= totalCycles) {
+          // Mark task as completed
+          await updateDoc(taskRef, {
+            completed: true
+          });
+          setIsTaskCompleted(true);
+          console.log("Task marked as completed!");
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to increment completed cycles:", err);
+    }
+  };
+
   // Timer logic
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -128,6 +200,8 @@ export default function PomodoroScreen() {
               console.warn("Audio player error on timer finish:", e);
             }
             setFinished(true);
+            // Increment completed cycles
+            incrementCompletedCycles();
             return 0;
           }
           return prev - 1;
@@ -260,8 +334,8 @@ export default function PomodoroScreen() {
 
     // Check if triple tap achieved
     if (tapCount.current === 3) {
-      // Admin bypass: set timer to 10 seconds
-      setTimeLeft(10);
+      // Admin bypass: set timer to 3 seconds
+      setTimeLeft(3);
       tapCount.current = 0;
     } else {
       // Reset tap count after 500ms if not triple tapped
@@ -364,6 +438,15 @@ export default function PomodoroScreen() {
               </Text>
             </View>
           )}
+          {taskId && (
+            <View className="bg-purple-500/20 border-2 border-purple-400/30 px-4 py-2 rounded-xl mt-2">
+              <Text className={`font-orbitron-bold text-base ${
+                currentCompletedCycles >= cycles ? "text-green-400" : "text-yellow-400"
+              }`}>
+                {currentCompletedCycles}/{cycles}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Player Image - Centered */}
@@ -396,7 +479,7 @@ export default function PomodoroScreen() {
               <MainButton
                 title="Play Game"
                 onPress={handlePlayGame}
-                variant="success"
+                variant="info"
                 testID="play-game-button"
                 customStyle={{ width: 192 }}
               />
@@ -412,7 +495,7 @@ export default function PomodoroScreen() {
             <MainButton
               title="Land"
               onPress={handleLand}
-              variant="error"
+              variant={isTaskCompleted ? "success" : "error"}
               testID="land-button"
               customStyle={{ width: 192 }}
             />
