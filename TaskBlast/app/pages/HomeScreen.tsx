@@ -233,6 +233,7 @@ export default function HomeScreen() {
         <TaskListModal
           visible={isTaskModalVisible}
           onClose={() => setIsTaskModalVisible(false)}
+          onRocksChange={loadScore}
         />
 
         {/* Settings Modal */}

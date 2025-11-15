@@ -23,6 +23,7 @@ import {
   serverTimestamp,
   Timestamp,
   getDoc,
+  increment,
 } from "firebase/firestore";
 
 interface Task {
@@ -36,6 +37,7 @@ interface Task {
   playTime: number;
   cycles: number;
   completedCycles: number;
+  archived: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -43,11 +45,13 @@ interface Task {
 interface TaskListModalProps {
   visible: boolean;
   onClose: () => void;
+  onRocksChange?: () => void;
 }
 
 export default function TaskListModal({
   visible,
   onClose,
+  onRocksChange,
 }: TaskListModalProps) {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -56,6 +60,8 @@ export default function TaskListModal({
   const [accountType, setAccountType] = useState<string>("");
   const [managerialPin, setManagerialPin] = useState<string | null>(null);
   const [showPinModal, setShowPinModal] = useState(false);
+  const [showUnarchivePinModal, setShowUnarchivePinModal] = useState(false);
+  const [pendingUnarchiveTaskId, setPendingUnarchiveTaskId] = useState<string | null>(null);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
   const pinRefs = useRef<Array<TextInput | null>>([null, null, null, null]);
@@ -66,6 +72,7 @@ export default function TaskListModal({
   useEffect(() => {
     if (visible) {
       setIsEditMode(false);
+      setIsArchiveMode(false);
       setIsAddingTask(false);
       setEditingTaskId(null);
     }
@@ -119,13 +126,15 @@ export default function TaskListModal({
               playTime: data.playTime || 5,
               cycles: data.cycles || 1,
               completedCycles: data.completedCycles || 0,
+              archived: data.archived || false,
               createdAt: data.createdAt || Timestamp.now(),
               updatedAt: data.updatedAt || Timestamp.now(),
             });
           });
-          // Sort tasks by creation date, newest first
-          taskList.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
-          setTasks(taskList);
+          // Filter tasks based on mode and sort by creation date, newest first
+          const filteredTasks = taskList;
+          filteredTasks.sort((a, b) => b.createdAt.seconds - a.createdAt.seconds);
+          setTasks(filteredTasks);
           setLoading(false);
           setError(null);
         },
@@ -144,6 +153,7 @@ export default function TaskListModal({
   }, [auth.currentUser]);
 
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isArchiveMode, setIsArchiveMode] = useState(false);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [newTaskName, setNewTaskName] = useState("");
@@ -158,6 +168,11 @@ export default function TaskListModal({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const taskTapCount = useRef<{[key: string]: number}>({});
   const taskTapTimer = useRef<{[key: string]: ReturnType<typeof setTimeout>}>({});
+
+  // Filter tasks based on current mode
+  const displayedTasks = isArchiveMode 
+    ? tasks.filter(task => task.archived)
+    : tasks.filter(task => !task.archived);
 
   const handleCompleteTask = async (taskId: string) => {
     if (!auth.currentUser) return;
@@ -178,6 +193,62 @@ export default function TaskListModal({
     } catch (error) {
       console.error("Error updating task:", error);
       Alert.alert("Error", "Failed to update task");
+    }
+  };
+
+  const handleArchiveTask = async (taskId: string) => {
+    if (!auth.currentUser) return;
+    try {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+
+      // Update task to archived
+      const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", taskId);
+      await updateDoc(taskRef, {
+        archived: true,
+        updatedAt: serverTimestamp(),
+      });
+
+      // Add rocks to user's account
+      const userRef = doc(db, "users", auth.currentUser.uid);
+      await updateDoc(userRef, {
+        rocks: increment(task.reward),
+      });
+
+      // Notify parent component to update rocks display
+      if (onRocksChange) {
+        onRocksChange();
+      }
+    } catch (error) {
+      console.error("Error archiving task:", error);
+      Alert.alert("Error", "Failed to archive task");
+    }
+  };
+
+  const handleUnarchiveTask = async (taskId: string) => {
+    if (!auth.currentUser) return;
+    try {
+      const taskRef = doc(db, "users", auth.currentUser.uid, "tasks", taskId);
+      await updateDoc(taskRef, {
+        archived: false,
+        completed: false,
+        completedCycles: 0,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error unarchiving task:", error);
+      Alert.alert("Error", "Failed to unarchive task");
+    }
+  };
+
+  const handleUnarchivePress = (taskId: string) => {
+    if (accountType === "managed") {
+      setPendingUnarchiveTaskId(taskId);
+      setShowUnarchivePinModal(true);
+      setPinInput("");
+      setPinError("");
+    } else {
+      handleUnarchiveTask(taskId);
     }
   };
 
@@ -212,6 +283,7 @@ export default function TaskListModal({
           playTime: newTaskPlayTime,
           cycles: newTaskCycles,
           completedCycles: 0,
+          archived: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         });
@@ -304,9 +376,11 @@ export default function TaskListModal({
       setShowPinModal(true);
       setPinInput("");
       setPinError("");
+      setIsArchiveMode(false);
     } else {
       // Independent account or switching back to normal mode
       setIsEditMode(!isEditMode);
+      setIsArchiveMode(false);
       setIsAddingTask(false);
       setEditingTaskId(null);
     }
@@ -325,6 +399,27 @@ export default function TaskListModal({
 
   const handlePinCancel = () => {
     setShowPinModal(false);
+    setPinInput("");
+    setPinError("");
+  };
+
+  const handleUnarchivePinSubmit = () => {
+    if (pinInput === managerialPin) {
+      setShowUnarchivePinModal(false);
+      setPinInput("");
+      setPinError("");
+      if (pendingUnarchiveTaskId) {
+        handleUnarchiveTask(pendingUnarchiveTaskId);
+        setPendingUnarchiveTaskId(null);
+      }
+    } else {
+      setPinError("Incorrect PIN. Please try again.");
+    }
+  };
+
+  const handleUnarchivePinCancel = () => {
+    setShowUnarchivePinModal(false);
+    setPendingUnarchiveTaskId(null);
     setPinInput("");
     setPinError("");
   };
@@ -449,6 +544,8 @@ export default function TaskListModal({
           className={`w-full max-w-md rounded-3xl p-6 border-2 shadow-2xl ${
             isEditMode
               ? "bg-[#2a2416] border-yellow-500/50"
+              : isArchiveMode
+              ? "bg-[#1a1a1a] border-gray-500/50"
               : "bg-[#1a1f3a] border-purple-500/30"
           }`}
         >
@@ -471,17 +568,20 @@ export default function TaskListModal({
             className={`flex-row mb-6 rounded-2xl p-1 border-2 ${
               isEditMode
                 ? "bg-yellow-900/40 border-yellow-400/30"
+                : isArchiveMode
+                ? "bg-gray-800/40 border-gray-400/30"
                 : "bg-indigo-900/40 border-indigo-400/30"
             }`}
           >
             <TouchableOpacity
               onPress={() => {
                 setIsEditMode(false);
+                setIsArchiveMode(false);
                 setIsAddingTask(false);
                 setEditingTaskId(null);
               }}
               className={`flex-1 py-3 rounded-xl items-center ${
-                !isEditMode ? "bg-purple-500" : "bg-transparent"
+                !isEditMode && !isArchiveMode ? "bg-purple-500" : "bg-transparent"
               }`}
             >
               <Text className="font-orbitron-bold text-white text-sm">
@@ -496,6 +596,21 @@ export default function TaskListModal({
             >
               <Text className="font-orbitron-bold text-white text-sm">
                 Edit
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setIsEditMode(false);
+                setIsArchiveMode(true);
+                setIsAddingTask(false);
+                setEditingTaskId(null);
+              }}
+              className={`flex-1 py-3 rounded-xl items-center ${
+                isArchiveMode ? "bg-gray-600" : "bg-transparent"
+              }`}
+            >
+              <Text className="font-orbitron-bold text-white text-sm">
+                Archive
               </Text>
             </TouchableOpacity>
           </View>
@@ -517,14 +632,14 @@ export default function TaskListModal({
           ) : (
             /* Task List */
             <ScrollView className="max-h-96 mb-4">
-              {tasks.length === 0 ? (
+              {displayedTasks.length === 0 ? (
                 <View className="items-center justify-center p-4">
                   <Text className="font-madimi text-white text-base">
-                    No tasks yet. Add your first task!
+                    {isArchiveMode ? "No archived tasks." : "No tasks yet. Add your first task!"}
                   </Text>
                 </View>
               ) : (
-                tasks.map((task) => (
+                displayedTasks.map((task) => (
                   <View
                     key={task.id}
                     className={`flex-row items-center justify-between p-4 mb-3 rounded-2xl border-2 ${
@@ -532,6 +647,8 @@ export default function TaskListModal({
                         ? "bg-green-500/20 border-green-400/30"
                         : isEditMode
                         ? "bg-yellow-600/20 border-yellow-500/40"
+                        : isArchiveMode
+                        ? "bg-gray-700/20 border-gray-500/40"
                         : "bg-purple-500/10 border-purple-400/30"
                     }`}
                   >
@@ -556,7 +673,7 @@ export default function TaskListModal({
                         />
                         <Text
                           className={`font-orbitron-bold text-sm ml-1 ${
-                            isEditMode ? "text-yellow-300" : "text-purple-300"
+                            isEditMode ? "text-yellow-300" : isArchiveMode ? "text-gray-300" : "text-purple-300"
                           }`}
                         >
                           {task.reward}
@@ -571,24 +688,40 @@ export default function TaskListModal({
 
                     {/* Action Buttons */}
                     <View className="flex-row gap-2">
-                      {isEditMode ? (
+                      {isArchiveMode ? (
                         <View className="flex-row">
                           <TouchableOpacity
-                            onPress={() => handleCompleteTask(task.id)}
-                            className={`w-10 h-10 rounded-full items-center justify-center mr-1 ${
-                              task.completed
-                                ? "bg-green-500"
-                                : "bg-green-600/40 border-2 border-green-500/40"
-                            }`}
+                            onPress={() => handleUnarchivePress(task.id)}
+                            className="w-10 h-10 rounded-full bg-gray-600/60 border-2 border-gray-400/60 items-center justify-center mr-1"
                           >
                             <Ionicons
-                              name={
-                                task.completed
-                                  ? "checkmark"
-                                  : "checkmark-outline"
-                              }
+                              name="arrow-undo"
+                              size={18}
+                              color="#d1d5db"
+                            />
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={() => handleShowInfo(task)}
+                            className="w-10 h-10 rounded-full bg-purple-500/30 border-2 border-purple-400/30 items-center justify-center"
+                          >
+                            <Ionicons
+                              name="information-circle"
                               size={20}
                               color="white"
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      ) : isEditMode ? (
+                        <View className="flex-row">
+                          <TouchableOpacity
+                            onPress={() => handleArchiveTask(task.id)}
+                            className="w-10 h-10 rounded-full items-center justify-center mr-1 bg-yellow-600/40 border-2 border-yellow-500/40"
+                          >
+                            <Ionicons
+                              name="archive"
+                              size={20}
+                              color="#fbbf24"
                             />
                           </TouchableOpacity>
 
@@ -914,6 +1047,91 @@ export default function TaskListModal({
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handlePinSubmit}
+                disabled={pinInput.length !== 4}
+                className={`flex-1 py-3 rounded-xl items-center border-2 ${
+                  pinInput.length === 4
+                    ? "bg-gradient-to-r from-yellow-600 to-amber-600 border-yellow-400/50"
+                    : "bg-gray-500/20 border-gray-400/20"
+                }`}
+              >
+                <Text className="font-orbitron-bold text-white text-base">
+                  Unlock
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Unarchive PIN Verification Modal */}
+      <Modal
+        visible={showUnarchivePinModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleUnarchivePinCancel}
+      >
+        <View className="flex-1 bg-black/70 items-center justify-center p-5">
+          <View className="bg-[#2a2416] w-full max-w-sm rounded-3xl p-6 border-2 border-yellow-500/50 shadow-2xl">
+            <View className="items-center mb-4">
+              <View className="bg-yellow-500/20 rounded-full p-3 mb-3">
+                <Ionicons name="shield-checkmark" size={40} color="#fbbf24" />
+              </View>
+              <Text className="font-orbitron-bold text-yellow-300 text-2xl text-center">
+                Manager Access
+              </Text>
+            </View>
+            <Text className="font-madimi text-yellow-100/80 text-sm mb-6 text-center">
+              Enter the 4-digit PIN to unarchive this task.
+            </Text>
+
+            <View className="mb-4">
+              <View className="flex-row justify-center gap-3">
+                {[0, 1, 2, 3].map((index) => (
+                  <View
+                    key={index}
+                    className="bg-yellow-900/30 border-2 border-yellow-500/40 rounded-xl w-16 h-16 items-center justify-center"
+                  >
+                    <TextInput
+                      ref={(ref) => { pinRefs.current[index] = ref; }}
+                      className="font-orbitron-bold text-3xl text-yellow-100 text-center w-full opacity-0"
+                      value={pinInput[index] || ""}
+                      onChangeText={(digit) => handlePinDigitChange(digit, index)}
+                      onKeyPress={(e) => handlePinKeyPress(e, index)}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      autoFocus={index === 0}
+                      selectTextOnFocus
+                      caretHidden={true}
+                    />
+                    <View className="absolute inset-0 items-center justify-center pointer-events-none">
+                      <Text className="font-orbitron-bold text-3xl text-yellow-100">
+                        {pinInput[index] ? "•" : ""}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {pinError && (
+              <View className="bg-red-500/20 border-2 border-red-400/30 p-3 rounded-xl mb-4">
+                <Text className="font-madimi text-red-200 text-sm text-center">
+                  {pinError}
+                </Text>
+              </View>
+            )}
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={handleUnarchivePinCancel}
+                className="flex-1 bg-gray-500/30 py-3 rounded-xl items-center border-2 border-gray-400/30"
+              >
+                <Text className="font-orbitron-bold text-white text-base">
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleUnarchivePinSubmit}
                 disabled={pinInput.length !== 4}
                 className={`flex-1 py-3 rounded-xl items-center border-2 ${
                   pinInput.length === 4
