@@ -180,7 +180,8 @@ export default function TaskListModal({
       const task = tasks.find((t) => t.id === taskId);
       if (task) {
         // Prevent marking as complete if cycles aren't fulfilled (only in normal mode)
-        if (!isEditMode && !task.completed && task.completedCycles < task.cycles) {
+        // Allow completion if cycles are infinite (-1) or cycles are met
+        if (!isEditMode && !task.completed && task.cycles !== -1 && task.completedCycles < task.cycles) {
           return;
         }
         
@@ -679,9 +680,9 @@ export default function TaskListModal({
                           {task.reward}
                         </Text>
                         <Text className={`font-orbitron-bold text-sm ml-3 ${
-                          task.completedCycles >= task.cycles ? "text-green-400" : "text-yellow-400"
+                          task.cycles === -1 ? "text-blue-400" : task.completedCycles >= task.cycles ? "text-green-400" : "text-yellow-400"
                         }`}>
-                          {task.completedCycles}/{task.cycles}
+                          {task.cycles === -1 ? `${task.completedCycles}/∞` : `${task.completedCycles}/${task.cycles}`}
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -743,11 +744,11 @@ export default function TaskListModal({
                         <View className="flex-row">
                           <TouchableOpacity
                             onPress={() => handleCompleteTask(task.id)}
-                            disabled={!task.completed && task.completedCycles < task.cycles}
+                            disabled={!task.completed && task.cycles !== -1 && task.completedCycles < task.cycles}
                             className={`w-10 h-10 rounded-full items-center justify-center mr-1 ${
                               task.completed
                                 ? "bg-green-500"
-                                : task.completedCycles >= task.cycles
+                                : task.cycles === -1 || task.completedCycles >= task.cycles
                                 ? "bg-green-500/30 border-2 border-green-400/30"
                                 : "bg-gray-500/20 border-2 border-gray-400/20"
                             }`}
@@ -759,7 +760,7 @@ export default function TaskListModal({
                                   : "checkmark-outline"
                               }
                               size={20}
-                              color={!task.completed && task.completedCycles < task.cycles ? "#666" : "white"}
+                              color={!task.completed && task.cycles !== -1 && task.completedCycles < task.cycles ? "#666" : "white"}
                             />
                           </TouchableOpacity>
 
@@ -937,16 +938,16 @@ export default function TaskListModal({
                 </Text>
                 <View className="flex-row items-center justify-between">
                   <TouchableOpacity
-                    onPress={() => setNewTaskCycles(Math.max(1, newTaskCycles - 1))}
+                    onPress={() => setNewTaskCycles(newTaskCycles <= 1 ? -1 : newTaskCycles - 1)}
                     className="w-10 h-10 bg-yellow-600/40 border border-yellow-500/50 rounded-lg items-center justify-center"
                   >
                     <Ionicons name="remove" size={20} color="white" />
                   </TouchableOpacity>
                   <Text className="font-orbitron-bold text-white text-xl">
-                    {newTaskCycles}
+                    {newTaskCycles === -1 ? "∞" : newTaskCycles}
                   </Text>
                   <TouchableOpacity
-                    onPress={() => setNewTaskCycles(newTaskCycles + 1)}
+                    onPress={() => setNewTaskCycles(newTaskCycles === -1 ? 1 : newTaskCycles + 1)}
                     className="w-10 h-10 bg-yellow-600/40 border border-yellow-500/50 rounded-lg items-center justify-center"
                   >
                     <Ionicons name="add" size={20} color="white" />
@@ -1276,7 +1277,7 @@ export default function TaskListModal({
                         Cycles
                       </Text>
                       <Text className="font-orbitron-bold text-white text-base">
-                        {selectedTask.completedCycles}/{selectedTask.cycles}
+                        {selectedTask.cycles === -1 ? `${selectedTask.completedCycles}/∞` : `${selectedTask.completedCycles}/${selectedTask.cycles}`}
                       </Text>
                     </View>
                   </View>

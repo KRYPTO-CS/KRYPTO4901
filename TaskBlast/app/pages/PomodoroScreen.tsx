@@ -161,7 +161,7 @@ export default function PomodoroScreen() {
       
       console.log("Incremented completed cycles for task");
       
-      // Check if all cycles are now completed
+      // Check if all cycles are now completed (but not for infinite cycles)
       const taskDoc = await getDoc(taskRef);
       if (taskDoc.exists()) {
         const taskData = taskDoc.data();
@@ -170,7 +170,8 @@ export default function PomodoroScreen() {
         
         setCurrentCompletedCycles(completedCycles);
         
-        if (completedCycles >= totalCycles) {
+        // Only auto-complete if cycles is not infinite (-1) and cycles are met
+        if (totalCycles !== -1 && completedCycles >= totalCycles) {
           // Mark task as completed
           await updateDoc(taskRef, {
             completed: true
@@ -441,9 +442,9 @@ export default function PomodoroScreen() {
           {taskId && (
             <View className="bg-purple-500/20 border-2 border-purple-400/30 px-4 py-2 rounded-xl mt-2">
               <Text className={`font-orbitron-bold text-base ${
-                currentCompletedCycles >= cycles ? "text-green-400" : "text-yellow-400"
+                cycles === -1 ? "text-blue-400" : currentCompletedCycles >= cycles ? "text-green-400" : "text-yellow-400"
               }`}>
-                {currentCompletedCycles}/{cycles}
+                {cycles === -1 ? `${currentCompletedCycles}/∞` : `${currentCompletedCycles}/${cycles}`}
               </Text>
             </View>
           )}
