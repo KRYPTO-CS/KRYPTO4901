@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import MainButton from "../components/MainButton";
+import EditProfileModal from "../components/EditProfileModal";
 import { updateProfilePicture } from "../../server/storageUtils";
 import { auth } from "../../server/firebase";
 import {
@@ -27,6 +28,7 @@ export default function ProfileScreen() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
 
   // Load user profile on component mount
   useEffect(() => {
@@ -41,7 +43,9 @@ export default function ProfileScreen() {
             // Set default profile if none exists
             setUserProfile({
               uid: currentUser.uid,
-              displayName: "Space Explorer",
+              firstName: "Space",
+              lastName: "Explorer",
+              displayName: "Space",
               email: currentUser.email || "",
               traits: ["Focused", "Persistent", "Creative", "Goal-Oriented"],
               awards: [
@@ -104,6 +108,10 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleProfileUpdate = (updatedProfile: UserProfile) => {
+    setUserProfile(updatedProfile);
+  };
+
   return (
     <View className="flex-1">
       {/* Animated stars background */}
@@ -138,7 +146,9 @@ export default function ProfileScreen() {
               textShadowRadius: 20,
             }}
           >
-            {userProfile?.displayName || "Space Explorer"}
+            {userProfile?.displayName ||
+              userProfile?.firstName ||
+              "Space Explorer"}
           </Text>
 
           {/* Profile Image */}
@@ -167,16 +177,6 @@ export default function ProfileScreen() {
                 <Ionicons name="person" size={64} color="white" />
               )}
             </TouchableOpacity>
-            <View
-              className="absolute bottom-0 right-0 w-10 h-10 rounded-full items-center justify-center"
-              style={{
-                backgroundColor: "#a855f7",
-                borderWidth: 3,
-                borderColor: "#1e1b4b",
-              }}
-            >
-              <Ionicons name="camera" size={20} color="white" />
-            </View>
           </View>
 
           {/* Edit Profile Button */}
@@ -193,8 +193,7 @@ export default function ProfileScreen() {
                 shadowRadius: 8,
               }}
               onPress={() => {
-                // Add edit profile logic
-                console.log("Edit profile pressed");
+                setIsEditModalVisible(true);
               }}
             >
               <Ionicons
@@ -308,6 +307,16 @@ export default function ProfileScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      {userProfile && (
+        <EditProfileModal
+          visible={isEditModalVisible}
+          onClose={() => setIsEditModalVisible(false)}
+          userProfile={userProfile}
+          onProfileUpdate={handleProfileUpdate}
+        />
+      )}
     </View>
   );
 }

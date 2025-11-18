@@ -3,11 +3,16 @@ import { firestore, auth } from "./firebase";
 
 export interface UserProfile {
   uid: string;
-  displayName: string;
+  firstName: string;
+  lastName: string;
+  displayName: string; // Nickname - defaults to firstName
   email: string;
   profilePicture?: string;
   traits?: string[];
   awards?: string[];
+  birthdate?: string;
+  accountType?: "managed" | "independent";
+  managerialPin?: string | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -45,7 +50,9 @@ export const createUserProfile = async (
     const userDocRef = doc(firestore, "users", userId);
     const newProfile: UserProfile = {
       uid: userId,
-      displayName: profileData.displayName || "Space Explorer",
+      firstName: profileData.firstName || "Space",
+      lastName: profileData.lastName || "Explorer",
+      displayName: profileData.displayName || profileData.firstName || "Space",
       email: profileData.email || "",
       profilePicture: profileData.profilePicture,
       traits: profileData.traits || [],
@@ -123,8 +130,11 @@ export const getOrCreateUserProfile = async (
 
     // Create new profile if it doesn't exist
     const currentUser = auth.currentUser;
+    const firstName = defaultData?.firstName || "Space";
     await createUserProfile(userId, {
-      displayName: currentUser?.displayName || defaultData?.displayName || "Space Explorer",
+      firstName,
+      lastName: defaultData?.lastName || "Explorer",
+      displayName: defaultData?.displayName || firstName,
       email: currentUser?.email || defaultData?.email || "",
       ...defaultData,
     });
