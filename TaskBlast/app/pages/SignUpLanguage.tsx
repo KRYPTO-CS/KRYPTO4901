@@ -7,6 +7,8 @@ import {
   Image,
 } from "react-native";
 import MainButton from "../components/MainButton";
+import { useTranslation } from "react-i18next";
+
 
 interface SignUpAccountTypeProps {
   onSubmit: (accountType: "English" | "Spanish") => void;
@@ -25,13 +27,18 @@ export default function SignUpAccountType({
   const starBackground = require("../../assets/backgrounds/starsAnimated.gif");
   const USA = require("../../assets/images/united-states.png");
   const Mexico = require("../../assets/images/mexico.png");
+  
+  const {t ,i18n} = useTranslation();
+
   const handleContinue = () => {
     setError("");
     if (!selected) {
-      setError("Please choose a language to continue");
+      setError(t("selectLanguage"));
       return;
     }
-    console.log("Account type submitted:", selected);
+
+
+    i18n.changeLanguage(selected === "English" ? "en" : "es");
     onSubmit(selected);
   };
 
@@ -99,7 +106,7 @@ export default function SignUpAccountType({
           ) : null}
 
           <MainButton
-            title="Continue"
+            title={t("continue")}
             variant="primary"
             size="medium"
             customStyle={{
