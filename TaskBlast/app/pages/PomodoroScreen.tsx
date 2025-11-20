@@ -14,14 +14,22 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import MainButton from "../components/MainButton";
 import { useAudioPlayer } from "expo-audio";
 import { getAuth } from "firebase/auth";
-import { getFirestore, doc, updateDoc, increment, getDoc } from "firebase/firestore";
+import {
+  getFirestore,
+  doc,
+  updateDoc,
+  increment,
+  getDoc,
+} from "firebase/firestore";
+import { useAudio } from "../context/AudioContext";
 
 export default function PomodoroScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { musicEnabled } = useAudio();
 
   // Extract task parameters from route params
-  const taskName = params.taskName as string || "Work Session";
+  const taskName = (params.taskName as string) || "Work Session";
   const workTime = params.workTime ? parseInt(params.workTime as string) : 25;
   const playTime = params.playTime ? parseInt(params.playTime as string) : 5;
   const cycles = params.cycles ? parseInt(params.cycles as string) : 1;
@@ -66,7 +74,7 @@ export default function PomodoroScreen() {
   useEffect(() => {
     const checkTaskCompletion = async () => {
       if (!taskId) return;
-      
+
       try {
         const auth = getAuth();
         const user = auth.currentUser;
@@ -75,7 +83,7 @@ export default function PomodoroScreen() {
         const db = getFirestore();
         const taskRef = doc(db, "users", user.uid, "tasks", taskId);
         const taskDoc = await getDoc(taskRef);
-        
+
         if (taskDoc.exists()) {
           const taskData = taskDoc.data();
           setIsTaskCompleted(taskData.completed || false);
@@ -132,21 +140,29 @@ export default function PomodoroScreen() {
 
   // Play music on mount
   useEffect(() => {
-    try {
-      player.play();
-    } catch (error) {
-      console.warn("Failed to play music:", error);
+    if (musicEnabled) {
+      try {
+        player.play();
+      } catch (error) {
+        console.warn("Failed to play music:", error);
+      }
+    } else {
+      try {
+        player.pause();
+      } catch (error) {
+        console.warn("Failed to pause music:", error);
+      }
     }
     return () => {
       // Cleanup is handled by expo-audio automatically
       // Don't manually pause/seek in cleanup to avoid stale reference issues
     };
-  }, []);
+  }, [musicEnabled]);
 
   // Function to increment completedCycles in database
   const incrementCompletedCycles = async () => {
     if (!taskId) return;
-    
+
     try {
       const auth = getAuth();
       const user = auth.currentUser;
@@ -154,27 +170,27 @@ export default function PomodoroScreen() {
 
       const db = getFirestore();
       const taskRef = doc(db, "users", user.uid, "tasks", taskId);
-      
+
       await updateDoc(taskRef, {
-        completedCycles: increment(1)
+        completedCycles: increment(1),
       });
-      
+
       console.log("Incremented completed cycles for task");
-      
+
       // Check if all cycles are now completed (but not for infinite cycles)
       const taskDoc = await getDoc(taskRef);
       if (taskDoc.exists()) {
         const taskData = taskDoc.data();
         const completedCycles = taskData.completedCycles || 0;
         const totalCycles = taskData.cycles || 1;
-        
+
         setCurrentCompletedCycles(completedCycles);
-        
+
         // Only auto-complete if cycles is not infinite (-1) and cycles are met
         if (totalCycles !== -1 && completedCycles >= totalCycles) {
           // Mark task as completed
           await updateDoc(taskRef, {
-            completed: true
+            completed: true,
           });
           setIsTaskCompleted(true);
           console.log("Task marked as completed!");
@@ -235,7 +251,9 @@ export default function PomodoroScreen() {
       } else if (nextState === "active") {
         // Calculate elapsed time if timer was running in background
         if (allowMinimization && backgroundTime.current !== null && !isPaused) {
-          const elapsed = Math.floor((Date.now() - backgroundTime.current) / 1000);
+          const elapsed = Math.floor(
+            (Date.now() - backgroundTime.current) / 1000
+          );
           setTimeLeft((prev) => {
             const newTime = prev - elapsed;
             if (newTime <= 0) {
@@ -441,10 +459,18 @@ export default function PomodoroScreen() {
           )}
           {taskId && (
             <View className="bg-purple-500/20 border-2 border-purple-400/30 px-4 py-2 rounded-xl mt-2">
-              <Text className={`font-orbitron-bold text-base ${
-                cycles === -1 ? "text-blue-400" : currentCompletedCycles >= cycles ? "text-green-400" : "text-yellow-400"
-              }`}>
-                {cycles === -1 ? `${currentCompletedCycles}/∞` : `${currentCompletedCycles}/${cycles}`}
+              <Text
+                className={`font-orbitron-bold text-base ${
+                  cycles === -1
+                    ? "text-blue-400"
+                    : currentCompletedCycles >= cycles
+                    ? "text-green-400"
+                    : "text-yellow-400"
+                }`}
+              >
+                {cycles === -1
+                  ? `${currentCompletedCycles}/∞`
+                  : `${currentCompletedCycles}/${cycles}`}
               </Text>
             </View>
           )}
