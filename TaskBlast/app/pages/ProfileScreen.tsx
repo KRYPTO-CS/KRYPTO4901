@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import MainButton from "../components/MainButton";
 import EditProfileModal from "../components/EditProfileModal";
+import TraitsModal from "../components/TraitsModal";
 import { updateProfilePicture } from "../../server/storageUtils";
 import { auth } from "../../server/firebase";
 import {
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isTraitsModalVisible, setIsTraitsModalVisible] = useState(false);
 
   // Load user profile on component mount
   useEffect(() => {
@@ -210,16 +212,37 @@ export default function ProfileScreen() {
 
           {/* Traits Container */}
           <View className="mb-6">
-            <Text
-              className="font-orbitron-semibold text-xl text-white text-xl mb-4"
-              style={{
-                textShadowColor: "rgba(59, 130, 246, 0.6)",
-                textShadowOffset: { width: 0, height: 0 },
-                textShadowRadius: 10,
-              }}
-            >
-              Traits
-            </Text>
+            <View className="flex-row justify-between items-center mb-4">
+              <Text
+                className="font-orbitron-semibold text-xl text-white"
+                style={{
+                  textShadowColor: "rgba(59, 130, 246, 0.6)",
+                  textShadowOffset: { width: 0, height: 0 },
+                  textShadowRadius: 10,
+                }}
+              >
+                Traits
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsTraitsModalVisible(true)}
+                className="flex-row items-center px-3 py-2 rounded-full"
+                style={{
+                  backgroundColor: "rgba(59, 130, 246, 0.3)",
+                  borderWidth: 1,
+                  borderColor: "rgba(96, 165, 250, 0.5)",
+                }}
+              >
+                <Ionicons
+                  name="add"
+                  size={16}
+                  color="white"
+                  style={{ marginRight: 4 }}
+                />
+                <Text className="font-orbitron-semibold text-white text-xs">
+                  Edit
+                </Text>
+              </TouchableOpacity>
+            </View>
             <View
               className="p-4 rounded-2xl"
               style={{
@@ -315,6 +338,16 @@ export default function ProfileScreen() {
           onClose={() => setIsEditModalVisible(false)}
           userProfile={userProfile}
           onProfileUpdate={handleProfileUpdate}
+        />
+      )}
+
+      {/* Traits Modal */}
+      {userProfile && (
+        <TraitsModal
+          visible={isTraitsModalVisible}
+          onClose={() => setIsTraitsModalVisible(false)}
+          userProfile={userProfile}
+          onTraitsUpdate={handleProfileUpdate}
         />
       )}
     </View>
